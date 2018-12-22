@@ -153,6 +153,7 @@ const efftype_id effect_pkill2( "pkill2" );
 const efftype_id effect_pkill3( "pkill3" );
 const efftype_id effect_recover( "recover" );
 const efftype_id effect_sad( "sad" );
+const efftype_id effect_seizure("seizure");
 const efftype_id effect_shakes( "shakes" );
 const efftype_id effect_sleep( "sleep" );
 const efftype_id effect_slept_through_alarm( "slept_through_alarm" );
@@ -378,6 +379,7 @@ static const trait_id trait_ROOTS3( "ROOTS3" );
 static const trait_id trait_SAPIOVORE( "SAPIOVORE" );
 static const trait_id trait_SAVANT( "SAVANT" );
 static const trait_id trait_SCHIZOPHRENIC( "SCHIZOPHRENIC" );
+static const trait_id trait_SEIZURE("SEIZURE");
 static const trait_id trait_SELFAWARE( "SELFAWARE" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHOUT1( "SHOUT1" );
@@ -5252,6 +5254,11 @@ void player::suffer()
                     cur_addiction.sated = 0_turns;
                 }
             }
+        }
+        if (has_trait(trait_SEIZURE) && one_in(14400)) {
+            mod_pain(5); //Pain is added and then taken away as a kind of hack, so that long-term activities will have a chance to be interrupted.
+            add_effect(effect_seizure, 1_hours);
+            mod_pain(-5);
         }
         if( has_trait( trait_CHEMIMBALANCE ) ) {
             if( one_in( 3600 ) && !has_trait( trait_NOPAIN ) ) {
