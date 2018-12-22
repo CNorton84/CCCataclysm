@@ -133,6 +133,7 @@
       { "item": "glasses_bifocal", "bonus": [ [ "HYPEROPIC", "MYOPIC" ] ] },
       { "item": "glasses_reading", "bonus": [ [ "HYPEROPIC" ], [ "MYOPIC" ] ] },
       { "item": "inhaler", "bonus": [ [ "ASTHMA" ] ] },
+	  { "item": "diazepam", "bonus": [ [ "SEIZURE" ] ] },
       { "item": "cookbook_human", "bonus": [ [ "CANNIBAL" ] ] },
       { "item": "teleumbrella", "bonus": [ [ "ALBINO" ] ] }
     ]
