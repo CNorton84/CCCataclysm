@@ -99,6 +99,7 @@ const efftype_id effect_adrenaline( "adrenaline" );
 const efftype_id effect_antibiotic( "antibiotic" );
 const efftype_id effect_antibiotic_visible( "antibiotic_visible" );
 const efftype_id effect_asthma( "asthma" );
+const efftype_id effect_seizure("seizure");
 const efftype_id effect_attention( "attention" );
 const efftype_id effect_bite( "bite" );
 const efftype_id effect_bleed( "bleed" );
@@ -179,6 +180,7 @@ static const trait_id trait_M_DEPENDENT( "M_DEPENDENT" );
 static const trait_id trait_MYOPIC( "MYOPIC" );
 static const trait_id trait_NOPAIN( "NOPAIN" );
 static const trait_id trait_PSYCHOPATH( "PSYCHOPATH" );
+static const trait_id trait_SEIZURE("SEIZURE");
 static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
 static const trait_id trait_THRESH_MARLOSS( "THRESH_MARLOSS" );
 static const trait_id trait_THRESH_MYCUS( "THRESH_MYCUS" );
@@ -622,6 +624,10 @@ int iuse::anticonvulsant( player *p, item *it, bool, const tripoint & )
     if( p->has_effect( effect_shakes ) ) {
         p->remove_effect( effect_shakes );
         p->add_msg_if_player( m_good, _( "You stop shaking." ) );
+    }
+    if (p->has_effect(effect_seizure)) {
+        p->remove_effect(effect_seizure);
+        p->add_msg_if_player(m_good, _("The tingling stops.  No seizures, for now."));
     }
     return it->type->charges_to_use();
 }
