@@ -173,7 +173,7 @@
   },
   { "info": "Initial points available to spend on skills on character generation.", "default": "Default: 2 - Min: 0, Max: 1000", "name": "INITIAL_SKILL_POINTS", "value": "2"
   },
-  { "info": "Maximum trait points available for character generation.", "default": "Default: 12 - Min: 0, Max: 1000", "name": "MAX_TRAIT_POINTS", "value": "12"
+  { "info": "Maximum trait points available for character generation.", "default": "Default: 12 - Min: 0, Max: 1000", "name": "MAX_TRAIT_POINTS", "value": "20"
   },
   { "info": "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "1.00"
   },
