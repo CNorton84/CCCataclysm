@@ -1360,6 +1360,22 @@
         "rating": "bad",
         "show_in_info": true
     },
+	
+	{
+        "type": "effect_type",
+        "id": "seizure",
+        "name": ["Incoming Seizure"],
+        "desc": ["There's a tense, tingling feeling behind your eyes.  You are going to have a seizure soon.  Take some Diazepam or find a safe place to wait it out."],
+        "apply_message": "You are going to have a seizure soon.  Take Diazepam or find a safe place to wait it out",
+        "rating": "bad",
+        "base_mods": {
+            "per_mod": [-1],
+            "dex_mod": [-1],
+			"int_mod": [-1]
+        },
+        "show_in_info": true
+    },
+	
     {
         "type": "effect_type",
         "id": "asthma",
