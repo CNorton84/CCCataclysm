@@ -10,6 +10,14 @@
         "category" : ["SPIDER", "MOUSE"],
         "types" : ["RUNNING"]
     },{
+	    "type" : "mutation",
+        "id" : "SEIZURE",
+        "name" : "Seizure Disorder",
+        "points" : -4,
+        "description" : "You have a seizure disorder.  Fortunately, you can feel when a seizure is coming and take some Diazepam to prevent it.  Due to a medication shortage you find yourself with a ten-day emergency supply.  Better make it last.",
+        "starting_trait" : true,
+        "valid" : false
+    },{
         "type" : "mutation",
         "id" : "GOODHEARING",
         "name" : "Good Hearing",
