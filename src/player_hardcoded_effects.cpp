@@ -61,6 +61,7 @@ const efftype_id effect_paincysts( "paincysts" );
 const efftype_id effect_panacea( "panacea" );
 const efftype_id effect_rat( "rat" );
 const efftype_id effect_recover( "recover" );
+const efftype_id effect_seizure("seizure");
 const efftype_id effect_shakes( "shakes" );
 const efftype_id effect_sleep( "sleep" );
 const efftype_id effect_slept_through_alarm( "slept_through_alarm" );
@@ -256,6 +257,7 @@ static void eff_fun_hallu( player &u, effect &it )
             loudness = ( loudness > 5 ? loudness : 5 );
             loudness = ( loudness < 30 ? loudness : 30 );
             sounds::sound( u.pos(), loudness, sounds::sound_t::speech, npc_text );
+            
         }
     } else if( dur == peakTime ) {
         // Visuals start
@@ -447,6 +449,42 @@ void player::hardcoded_effects( effect &it )
     int intense = it.get_intensity();
     body_part bp = it.get_bp();
     bool sleeping = has_effect( effect_sleep );
+
+    if (id == effect_seizure) {
+        bool triggered = false;
+        int seize_chance = 0;
+        if (dur <= 1_hours) {
+            seize_chance = to_turns<int>(dur) + 300;
+        }
+        if (((one_in(seize_chance)) || (dur <= 1_turns)) && (!triggered)) {
+
+            triggered = true;
+            add_msg_if_player(m_bad, _("You lose consciousness and begin to seize."));
+            sounds::sound(pos(), 10, sounds::sound_t::movement, "");
+            add_effect(effect_narcosis, 5_minutes);
+            fall_asleep(5_minutes);
+            add_effect(effect_downed, 5_minutes, num_bp, false, 10000, true);
+            if (one_in(8) || x_in_y(vomit_mod(), 10)) {
+                vomit();
+            }
+            if (one_in(4)) {
+                damage_instance di = damage_instance(DT_BASH, rng(5, 10));
+                deal_damage(nullptr, bp_head, di);
+                add_msg_if_player(m_bad, _("Your convulsions cause you bash your head against the ground!"));
+            }
+            mod_stat("stamina", -1000);
+            add_msg_if_player(m_bad, _("You gasp for air.  That seizure took a lot out of you."));
+        }
+        if (triggered) {
+            // Set ourselves up for removal
+            it.set_duration(0_turns);
+        }
+        else {
+            // Count duration down
+            //it.mod_duration(-1_turns);
+        }
+    }
+
     if( id == effect_dermatik ) {
         bool triggered = false;
         int formication_chance = 600;
