@@ -1,0 +1,15 @@
+{
+  "fontblending": true,
+  "fontwidth": 8,
+  "fontheight": 15,
+  "fontsize": 15,
+  "typeface": "UbuntuMono-B",
+  "map_fontwidth": 10,
+  "map_fontheight": 20,
+  "map_fontsize": 20,
+  "map_typeface": "UbuntuMono-B",
+  "overmap_fontwidth": 10,
+  "overmap_fontheight": 20,
+  "overmap_fontsize": 20,
+  "overmap_typeface": "UbuntuMono-B"
+}
