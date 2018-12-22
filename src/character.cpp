@@ -501,7 +501,7 @@ void Character::recalc_hp()
     float hp_adjustment = mutation_value( "hp_adjustment" );
     for( auto &elem : new_max_hp ) {
         /** @EFFECT_STR_MAX increases base hp */
-        elem = 60 + str_max * 3 + hp_adjustment;
+        elem = 30 + str_max * 1.5 + hp_adjustment; //base is cut in half to 30, str bonus cut in half to 1.5
         elem *= hp_mod;
     }
     if( has_trait( trait_GLASSJAW ) ) {
