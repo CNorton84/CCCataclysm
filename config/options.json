@@ -1,19 +1,19 @@
 [
   { "info": "Set a default character name that will be used instead of a random name on character creation.", "default": "Default: ", "name": "DEF_CHAR_NAME", "value": ""
   },
-  { "info": "Enable item auto pickup.  Change pickup rules with the Auto Pickup Manager.", "default": "Default: False", "name": "AUTO_PICKUP", "value": "false"
+  { "info": "Enable item auto pickup.  Change pickup rules with the Auto Pickup Manager.", "default": "Default: False", "name": "AUTO_PICKUP", "value": "true"
   },
-  { "info": "If true, will enable to pickup items one tile around to the player.  You can assign No Auto Pickup zones with the Zones Manager 'Y' key for e.g.  your homebase.", "default": "Default: False", "name": "AUTO_PICKUP_ADJACENT", "value": "false"
+  { "info": "If true, will enable to pickup items one tile around to the player.  You can assign No Auto Pickup zones with the Zones Manager 'Y' key for e.g.  your homebase.", "default": "Default: False", "name": "AUTO_PICKUP_ADJACENT", "value": "true"
   },
   { "info": "Auto pickup items with weight less than or equal to [option] * 50 grams.  You must also set the small items option.  '0' disables this option", "default": "Default: 0 - Min: 0, Max: 20", "name": "AUTO_PICKUP_WEIGHT_LIMIT", "value": "0"
   },
   { "info": "Auto pickup items with volume less than or equal to [option] * 50 milliliters.  You must also set the light items option.  '0' disables this option", "default": "Default: 0 - Min: 0, Max: 20", "name": "AUTO_PICKUP_VOL_LIMIT", "value": "0"
   },
-  { "info": "Auto pickup is disabled as long as you can see monsters nearby.  This is affected by 'Safe Mode proximity distance'.", "default": "Default: False", "name": "AUTO_PICKUP_SAFEMODE", "value": "false"
+  { "info": "Auto pickup is disabled as long as you can see monsters nearby.  This is affected by 'Safe Mode proximity distance'.", "default": "Default: False", "name": "AUTO_PICKUP_SAFEMODE", "value": "true"
   },
   { "info": "If false, you will not see messages about items, you step on, within no auto pickup zones.", "default": "Default: True", "name": "NO_AUTO_PICKUP_ZONES_LIST_ITEMS", "value": "true"
   },
-  { "info": "If true, enables configured auto features below.  Disabled as long as any enemy monster is seen.", "default": "Default: False", "name": "AUTO_FEATURES", "value": "false"
+  { "info": "If true, enables configured auto features below.  Disabled as long as any enemy monster is seen.", "default": "Default: False", "name": "AUTO_FEATURES", "value": "true"
   },
   { "info": "Action to perform when 'Auto pulp or butcher' is enabled.  Pulp: Pulp corpses you stand on.  - Pulp Adjacent: Also pulp corpses adjacent from you.  - Butcher: Butcher corpses you stand on.", "default": "Default: off - Values: off, pulp, pulp_adjacent, butcher", "name": "AUTO_PULP_BUTCHER", "value": "off"
   },
@@ -25,11 +25,11 @@
   },
   { "info": "If true, will hold the game and display a warning if a hostile monster/npc is approaching.", "default": "Default: True", "name": "SAFEMODE", "value": "true"
   },
-  { "info": "If safe mode is enabled, distance to hostiles at which safe mode should show a warning.  0 = Max player view distance.", "default": "Default: 0 - Min: 0, Max: 60", "name": "SAFEMODEPROXIMITY", "value": "5"
+  { "info": "If safe mode is enabled, distance to hostiles at which safe mode should show a warning.  0 = Max player view distance.", "default": "Default: 0 - Min: 0, Max: 60", "name": "SAFEMODEPROXIMITY", "value": "10"
   },
   { "info": "When true, safe mode will alert you of hostiles while you are driving a vehicle.", "default": "Default: False", "name": "SAFEMODEVEH", "value": "false"
   },
-  { "info": "If true, safe mode will automatically reactivate after a certain number of turns.  See option 'Turns to auto reactivate safe mode.'", "default": "Default: False", "name": "AUTOSAFEMODE", "value": "false"
+  { "info": "If true, safe mode will automatically reactivate after a certain number of turns.  See option 'Turns to auto reactivate safe mode.'", "default": "Default: False", "name": "AUTOSAFEMODE", "value": "true"
   },
   { "info": "Number of turns after which safe mode is reactivated. Will only reactivate if no hostiles are in 'Safe mode proximity distance.'", "default": "Default: 50 - Min: 1, Max: 100", "name": "AUTOSAFEMODETURNS", "value": "50"
   },
