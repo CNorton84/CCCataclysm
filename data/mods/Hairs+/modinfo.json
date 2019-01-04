@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "ident": "Hairs",
+    "name": "Hair aka Rainbow",
+    "authors": [ "Vasyan, Duxas, veedanya, SomeDeadGuy" ],
+    "description": "Adds different colors of hairs, eyes and skins. NPCs are supported via 'NPC traits' and 'Mutant NPCs' mods. *visual works only with MSX++DeadPeopleEdition tileset.",
+    "category": "misc_additions",
+    "dependencies": [ "dda", "npc_traits" ]
+  }
+]
