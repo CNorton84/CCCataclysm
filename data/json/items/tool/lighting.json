@@ -33,7 +33,7 @@
     "type": "TOOL",
     "name": "electric lantern (on)",
     "name_plural": "electric lanterns (on)",
-    "turns_per_charge": 42,
+    "turns_per_charge": 126,
     "revert_to": "electric_lantern",
     "use_action": {
         "menu_text": "Turn off",
@@ -74,7 +74,7 @@
     "type": "TOOL",
     "name": "flashlight (on)",
     "name_plural": "flashlights (on)",
-    "turns_per_charge": 24,
+    "turns_per_charge": 72,
     "revert_to": "flashlight",
     "use_action": {
         "menu_text": "Turn off",
@@ -151,7 +151,7 @@
     "type": "TOOL",
     "name": "heavy duty flashlight (on)",
     "name_plural": "heavy duty flashlights (on)",
-    "turns_per_charge": 9,
+    "turns_per_charge": 27,
     "revert_to": "heavy_flashlight",
     "use_action": {
         "menu_text": "Turn off",

@@ -1286,7 +1286,7 @@
     "type": "TOOL",
     "name": "cellphone - Flashlight",
     "name_plural": "cellphones - Flashlight",
-    "turns_per_charge": 30,
+    "turns_per_charge": 90,
     "revert_to": "cell_phone",
     "use_action": { "target": "cell_phone", "msg": "You stop lighting up the screen.", "menu_text": "Turn off", "type": "transform" },
     "flags": [ "LIGHT_15", "CHARGEDIM", "TRADER_AVOID" ]
@@ -1328,7 +1328,7 @@
     "type": "TOOL",
     "name": "smartphone - Flashlight",
     "name_plural": "smartphones - Flashlight",
-    "turns_per_charge": 50,
+    "turns_per_charge": 150,
     "revert_to": "smart_phone",
     "use_action": {
       "target": "smart_phone",
