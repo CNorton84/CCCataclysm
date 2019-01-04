@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cataclysm", "Cataclysm.vcxproj", "{18A6550D-1A53-478B-B615-20A2AF25A2CB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cataclysm", "Cataclysm.vcxproj", "{2586F32C-9F3B-4410-88D1-4543C38511D7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8309953A-3C97-45C4-A674-BCC7FAA49283}"
 	ProjectSection(SolutionItems) = preProject
@@ -22,14 +22,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Debug|x64.ActiveCfg = Debug|x64
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Debug|x64.Build.0 = Debug|x64
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Debug|x86.ActiveCfg = Debug|Win32
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Debug|x86.Build.0 = Debug|Win32
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Release|x64.ActiveCfg = Release|x64
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Release|x64.Build.0 = Release|x64
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Release|x86.ActiveCfg = Release|Win32
-		{18A6550D-1A53-478B-B615-20A2AF25A2CB}.Release|x86.Build.0 = Release|Win32
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Debug|x64.ActiveCfg = Debug|x64
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Debug|x64.Build.0 = Debug|x64
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Debug|x86.ActiveCfg = Debug|Win32
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Debug|x86.Build.0 = Debug|Win32
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Release|x64.ActiveCfg = Release|x64
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Release|x64.Build.0 = Release|x64
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Release|x86.ActiveCfg = Release|Win32
+		{2586F32C-9F3B-4410-88D1-4543C38511D7}.Release|x86.Build.0 = Release|Win32
 		{6F6EACFC-B178-4E71-ABE2-805C1F4BF3D8}.Debug|x64.ActiveCfg = Debug|x64
 		{6F6EACFC-B178-4E71-ABE2-805C1F4BF3D8}.Debug|x64.Build.0 = Debug|x64
 		{6F6EACFC-B178-4E71-ABE2-805C1F4BF3D8}.Debug|x86.ActiveCfg = Debug|Win32
@@ -49,5 +49,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {820F660D-ABB7-4F81-A1F6-1D95CCCBA25A}
 	EndGlobalSection
 EndGlobal
