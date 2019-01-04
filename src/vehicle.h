@@ -4,6 +4,7 @@
 
 #include "active_item_cache.h"
 #include "calendar.h"
+#include "clzones.h"
 #include "damage.h"
 #include "item.h"
 #include "item_group.h"
@@ -991,6 +992,8 @@ class vehicle
         // Calculate vehicle's total drain or production of electrical power, optionally
         // including nominal solar power.  Return engine power as engine_power
         int total_epower_w( int &engine_power, bool skip_solar = true );
+        // Calculate the total available power rating of all reactors
+        int total_reactor_epower_w() const;
         // Produce and consume electrical power, with excess power stored or taken from
         // batteries
         void power_parts();
@@ -1034,19 +1037,36 @@ class vehicle
         // their safe power.
         int total_power_w( bool fueled = true, bool safe = false ) const;
 
-        // Get acceleration gained by combined power of all engines. If fueled == true, then only engines which
-        // vehicle have fuel for are accounted
+        // Get ground acceleration gained by combined power of all engines. If fueled == true,
+        // then only engines which the vehicle has fuel for are included
+        int ground_acceleration( bool fueled = true, int at_vel_in_vmi = -1 ) const;
+        // Get water acceleration gained by combined power of all engines. If fueled == true,
+        // then only engines which the vehicle has fuel for are included
+        int water_acceleration( bool fueled = true, int at_vel_in_vmi = -1 ) const;
+        // Get acceleration for the current movement mode
         int acceleration( bool fueled = true, int at_vel_in_vmi = -1 ) const;
+
+        // Get the vehicle's actual current acceleration
         int current_acceleration( bool fueled = true ) const;
 
         // is the vehicle currently moving?
         bool is_moving() const;
-        // Get maximum velocity gained by combined power of all engines. If fueled == true, then only engines which
-        // vehicle have fuel for are accounted
+        // Get maximum ground velocity gained by combined power of all engines.
+        // If fueled == true, then only the engines which the vehicle has fuel for are included
+        int max_ground_velocity( bool fueled = true ) const;
+        // Get maximum water velocity gained by combined power of all engines.
+        // If fueled == true, then only the engines which the vehicle has fuel for are included
+        int max_water_velocity( bool fueled = true ) const;
+        // Get maximum velocity for the current movement mode
         int max_velocity( bool fueled = true ) const;
 
-        // Get safe velocity gained by combined power of all engines. If fueled == true, then only engines which
-        // vehicle have fuel for are accounted
+        // Get safe ground velocity gained by combined power of all engines.
+        // If fueled == true, then only the engines which the vehicle has fuel for are included
+        int safe_ground_velocity( bool fueled = true ) const;
+        // Get safe water velocity gained by combined power of all engines.
+        // If fueled == true, then only the engines which the vehicle has fuel for are included
+        int safe_water_velocity( bool fueled = true ) const;
+        // Get maximum velocity for the current movement mode
         int safe_velocity( bool fueled = true ) const;
 
         // Generate smoke from a part, either at front or back of vehicle depending on velocity.
@@ -1057,9 +1077,8 @@ class vehicle
 
         /**
          * Calculates the sum of the area under the wheels of the vehicle.
-         * @param boat If true, calculates the area under "wheels" that allow swimming.
          */
-        float wheel_area( bool boat ) const;
+        float wheel_area() const;
 
         /**
          * Physical coefficients used for vehicle calculations.
@@ -1090,6 +1109,23 @@ class vehicle
         double coeff_water_drag() const;
 
         /**
+         * water draft in meters - how much of the vehicle's body is under water
+         * must be less than the hull height or the boat will sink
+         * at some point, also add boats with deep draft running around
+         */
+        double water_draft() const;
+
+        /**
+         * can_float
+         * does the vehicle have freeboard or does it overflow with whater?
+         */
+        bool can_float() const;
+        /**
+         * is the vehicle mostly in water or mostly on fairly dry land?
+         */
+        bool is_in_water() const;
+
+        /**
          * Traction coefficient of the vehicle.
          * 1.0 on road. Outside roads, depends on mass divided by wheel area
          * and the surface beneath wheels.
@@ -1106,10 +1142,10 @@ class vehicle
         // strain of engine(s) if it works higher that safe speed (0-1.0)
         float strain() const;
 
-        // Calculate if it can move using its wheels or boat parts configuration
-        bool sufficient_wheel_config( bool floating ) const;
-        bool balanced_wheel_config( bool floating ) const;
-        bool valid_wheel_config( bool floating ) const;
+        // Calculate if it can move using its wheels
+        bool sufficient_wheel_config() const;
+        bool balanced_wheel_config() const;
+        bool valid_wheel_config() const;
 
         // return the relative effectiveness of the steering (1.0 is normal)
         // <0 means there is no steering installed at all.
@@ -1377,6 +1413,8 @@ class vehicle
         void on_move();
         // move the vehicle on the map
         bool act_on_map();
+        // check if the vehicle should be falling or is in water
+        void check_falling_or_floating();
 
         /**
          * Update the submap coordinates smx, smy, and update the tracker info in the overmap
@@ -1394,6 +1432,9 @@ class vehicle
         /** Required strength to be able to successfully lift the vehicle unaided by equipment */
         int lift_strength() const;
 
+        // Called by map.cpp to make sure the real position of each zone_data is accurate
+        bool refresh_zones();
+
         // config values
         std::string name;   // vehicle name
         /**
@@ -1407,6 +1448,8 @@ class vehicle
         std::map<point, std::vector<int> >
         relative_parts;    // parts_at_relative(dp) is used a lot (to put it mildly)
         std::set<label> labels;            // stores labels
+        std::unordered_multimap<point, zone_data> loot_zones;
+        // relative loot zone positions
         std::vector<int> alternators;      // List of alternator indices
         std::vector<int> engines;          // List of engine indices
         std::vector<int> reactors;         // List of reactor indices
@@ -1510,9 +1553,11 @@ class vehicle
         // "inside" flags are outdated and need refreshing
         bool insides_dirty              = true;
         // Is the vehicle hanging in the air and expected to fall down in the next turn?
-        bool falling                    = false;
+        bool is_falling                 = false;
         // last time point the fluid was inside tanks was checked for processing
         time_point last_fluid_check = calendar::time_of_cataclysm;
+        // zone_data positions are outdated and need refreshing
+        bool zones_dirty = true;
 
     private:
         // refresh pivot_cache, clear pivot_dirty
@@ -1550,16 +1595,19 @@ class vehicle
         mutable bool coeff_rolling_dirty = true;
         mutable bool coeff_air_dirty = true;
         mutable bool coeff_water_dirty = true;
-        // air and water use a two stage dirty check: one dirty bit gets set on part install,
+        // air uses a two stage dirty check: one dirty bit gets set on part install,
         // removal, or breakage. The other dirty bit only gets set during part_removal_cleanup,
         // and that's the bit that controls recalculation.  The intent is to only recalculate
         // the coeffs once per turn, even if multiple parts are destroyed in a collision
         mutable bool coeff_air_changed = true;
-        mutable bool coeff_water_changed = true;
 
-        mutable double coefficient_air_resistance;
-        mutable double coefficient_rolling_resistance;
-        mutable double coefficient_water_resistance;
+        mutable double coefficient_air_resistance = 1;
+        mutable double coefficient_rolling_resistance = 1;
+        mutable double coefficient_water_resistance = 1;
+        mutable double draft_m = 1;
+        mutable double hull_height = 0.3;
+        // is the vehicle currently mostly in water
+        mutable bool is_floating = false;
 };
 
 #endif

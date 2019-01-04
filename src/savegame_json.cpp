@@ -2160,7 +2160,8 @@ void vehicle::deserialize( JsonIn &jsin )
     data.read( "moveDir", mdir );
     data.read( "turn_dir", turn_dir );
     data.read( "velocity", velocity );
-    data.read( "falling", falling );
+    data.read( "falling", is_falling );
+    data.read( "floating", is_floating );
     data.read( "cruise_velocity", cruise_velocity );
     data.read( "vertical_velocity", vertical_velocity );
     data.read( "cruise_on", cruise_on );
@@ -2221,6 +2222,16 @@ void vehicle::deserialize( JsonIn &jsin )
     data.read( "tags", tags );
     data.read( "labels", labels );
 
+    point p;
+    zone_data zd;
+    JsonArray ja = data.get_array( "zones" );
+    while( ja.has_more() ) {
+        JsonObject sdata = ja.next_object();
+        sdata.read( "point", p );
+        sdata.read( "zone", zd );
+        loot_zones.emplace( p, zd );
+    }
+
     // Note that it's possible for a vehicle to be loaded midway
     // through a turn if the player is driving REALLY fast and their
     // own vehicle motion takes them in range. An undefined value for
@@ -2266,7 +2277,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "moveDir", move.dir() );
     json.member( "turn_dir", turn_dir );
     json.member( "velocity", velocity );
-    json.member( "falling", falling );
+    json.member( "falling", is_falling );
+    json.member( "floating", is_floating );
     json.member( "cruise_velocity", cruise_velocity );
     json.member( "vertical_velocity", vertical_velocity );
     json.member( "cruise_on", cruise_on );
@@ -2278,6 +2290,15 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "parts", parts );
     json.member( "tags", tags );
     json.member( "labels", labels );
+    json.member( "zones" );
+    json.start_array();
+    for( auto const &z : loot_zones ) {
+        json.start_object();
+        json.member( "point", z.first );
+        json.member( "zone", z.second );
+        json.end_object();
+    }
+    json.end_array();
     json.member( "is_locked", is_locked );
     json.member( "is_alarm_on", is_alarm_on );
     json.member( "camera_on", camera_on );

@@ -310,17 +310,23 @@ void vehicle::init_state( int init_veh_fuel, int init_veh_status )
         }
 
         auto light_head  = one_in( 20 );
+        auto light_whead  = one_in( 20 ); // wide-angle headlight
         auto light_dome  = one_in( 16 );
         auto light_aisle = one_in( 8 );
+        auto light_hoverh = one_in( 4 ); // half circle overhead light
         auto light_overh = one_in( 4 );
         auto light_atom  = one_in( 2 );
         for( auto &pt : parts ) {
             if( pt.has_flag( VPFLAG_CONE_LIGHT ) ) {
                 pt.enabled = light_head;
+            } else if( pt.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ) {
+                pt.enabled = light_whead;
             } else if( pt.has_flag( VPFLAG_DOME_LIGHT ) ) {
                 pt.enabled = light_dome;
             } else if( pt.has_flag( VPFLAG_AISLE_LIGHT ) ) {
                 pt.enabled = light_aisle;
+            } else if( pt.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
+                pt.enabled = light_hoverh;
             } else if( pt.has_flag( VPFLAG_CIRCLE_LIGHT ) ) {
                 pt.enabled = light_overh;
             } else if( pt.has_flag( VPFLAG_ATOMIC_LIGHT ) ) {
@@ -480,7 +486,7 @@ void vehicle::init_state( int init_veh_fuel, int init_veh_status )
     // destroy tires until the vehicle is not drivable
     if( destroyTires && !wheelcache.empty() ) {
         int tries = 0;
-        while( valid_wheel_config( false ) && tries < 100 ) {
+        while( valid_wheel_config() && tries < 100 ) {
             // wheel config is still valid, destroy the tire.
             set_hp( parts[random_entry( wheelcache )], 0 );
             tries++;
@@ -1252,7 +1258,6 @@ int vehicle::install_part( const point dp, const vehicle_part &new_part )
 
     refresh();
     coeff_air_changed = true;
-    coeff_water_changed = true;
     return parts.size() - 1;
 }
 
@@ -1482,6 +1487,15 @@ bool vehicle::remove_part( int p )
         }
     }
 
+    //Remove loot zone if Cargo was removed.
+    const auto lz_iter = loot_zones.find( parts[p].mount );
+    const bool no_zone = lz_iter != loot_zones.end();
+
+    if( no_zone && part_flag( p, "CARGO" ) ) {
+        loot_zones.erase( lz_iter );
+        zones_dirty = true;
+    }
+
     parts[p].removed = true;
     removed_part_count++;
 
@@ -1522,7 +1536,6 @@ bool vehicle::remove_part( int p )
     g->m.dirty_vehicle_list.insert( this );
     refresh();
     coeff_air_changed = true;
-    coeff_water_changed = true;
     return shift_if_needed();
 }
 
@@ -1554,9 +1567,7 @@ void vehicle::part_removal_cleanup()
     shift_if_needed();
     refresh(); // Rebuild cached indices
     coeff_air_dirty = coeff_air_changed;
-    coeff_water_dirty = coeff_water_changed;
     coeff_air_changed = false;
-    coeff_water_changed = false;
 }
 
 void vehicle::remove_carried_flag()
@@ -1768,6 +1779,7 @@ bool vehicle::split_vehicles( const std::vector<std::vector <int>> &new_vehs,
         point mnt_offset;
 
         decltype( labels ) new_labels;
+        decltype( loot_zones ) new_zones;
         if( new_vehicle == nullptr ) {
             // make sure the split_part0 is a legal 0,0 part
             if( split_parts.size() > 1 ) {
@@ -1822,6 +1834,12 @@ bool vehicle::split_vehicles( const std::vector<std::vector <int>> &new_vehs,
                 labels.erase( iter );
                 new_labels.insert( label( new_mount, label_str ) );
             }
+            // remove loot zones associated with the mov_part
+            const auto lz_iter = loot_zones.find( cur_mount );
+            if( lz_iter != loot_zones.end() ) {
+                new_zones.emplace( new_mount, lz_iter->second );
+                loot_zones.erase( lz_iter );
+            }
             // remove the passenger from the old new vehicle
             if( passenger ) {
                 parts[ mov_part ].remove_flag( vehicle_part::passenger_flag );
@@ -1835,6 +1853,9 @@ bool vehicle::split_vehicles( const std::vector<std::vector <int>> &new_vehs,
         g->m.set_transparency_cache_dirty( smz );
         if( !new_labels.empty() ) {
             new_vehicle->labels = new_labels;
+        }
+        if( !new_zones.empty() ) {
+            new_vehicle->loot_zones = new_zones;
         }
 
         if( !split_mounts.empty() ) {
@@ -2804,7 +2825,7 @@ bool vehicle::is_moving() const
     return velocity != 0;
 }
 
-int vehicle::acceleration( const bool fueled, int at_vel_in_vmi ) const
+int vehicle::ground_acceleration( const bool fueled, int at_vel_in_vmi ) const
 {
     if( !( engine_on || skidding ) ) {
         return 0;
@@ -2817,6 +2838,22 @@ int vehicle::acceleration( const bool fueled, int at_vel_in_vmi ) const
              cmps_to_vmiph( accel_at_vel ) );
     return cmps_to_vmiph( accel_at_vel );
 }
+
+int vehicle::water_acceleration( const bool fueled, int at_vel_in_vmi ) const
+{
+    if( !( engine_on || skidding ) ) {
+        return 0;
+    }
+    int target_vmiph = std::max( at_vel_in_vmi, std::max( 1000,
+                                 max_water_velocity( fueled ) / 4 ) );
+    int cmps = vmiph_to_cmps( target_vmiph );
+    int engine_power_ratio = total_power_w( fueled ) / to_kilogram( total_mass() );
+    int accel_at_vel = 100 * 100 * engine_power_ratio / cmps;
+    add_msg( m_debug, "%s: water accel at %d vimph is %d", name, target_vmiph,
+             cmps_to_vmiph( accel_at_vel ) );
+    return cmps_to_vmiph( accel_at_vel );
+}
+
 
 // cubic equation solution
 // don't use complex numbers unless necessary and it's usually not
@@ -2852,6 +2889,14 @@ double simple_cubic_solution( double a, double b, double c, double d )
     }
 }
 
+int vehicle::acceleration( const bool fueled, int at_vel_in_vmi ) const
+{
+    if( is_floating ) {
+        return water_acceleration( fueled, at_vel_in_vmi );
+    }
+    return ground_acceleration( fueled, at_vel_in_vmi );
+}
+
 int vehicle::current_acceleration( const bool fueled ) const
 {
     return acceleration( fueled, std::abs( velocity ) );
@@ -2882,7 +2927,7 @@ int vehicle::current_acceleration( const bool fueled ) const
 // c_air_drag * v^3 + c_rolling_drag * v^2 + c_rolling_drag * 33.3 * v - engine power = 0
 // solve for v with the simplified cubic equation solver
 // got it? quiz on Wednesday.
-int vehicle::max_velocity( const bool fueled ) const
+int vehicle::max_ground_velocity( const bool fueled ) const
 {
     int total_engine_w = total_power_w( fueled );
     double c_rolling_drag = coeff_rolling_drag();
@@ -2894,8 +2939,33 @@ int vehicle::max_velocity( const bool fueled ) const
     return mps_to_vmiph( max_in_mps );
 }
 
-// the same physics as max_velocity, but with a smaller engine power
-int vehicle::safe_velocity( const bool fueled ) const
+// the same physics as ground velocity, but there's no rolling resistance so the math is easy
+// F_drag = F_water_drag + F_air_drag
+// F_drag = c_water_drag * velocity^2 + c_air_drag * velocity^2
+// F_drag = ( c_water_drag + c_air_drag ) * velocity^2
+// F_prop = engine_power / velocity
+// F_prop = F_drag
+// engine_power / velocity = ( c_water_drag + c_air_drag ) * velocity^2
+// engine_power = ( c_water_drag + c_air_drag ) * velocity^3
+// velocity^3 = engine_power / ( c_water_drag + c_air_drag )
+// velocity = cube root( engine_power / ( c_water_drag + c_air_drag ) )
+int vehicle::max_water_velocity( const bool fueled ) const
+{
+    int total_engine_w = total_power_w( fueled );
+    double total_drag = coeff_water_drag() + coeff_air_drag();
+    double max_in_mps = std::cbrt( total_engine_w / total_drag );
+    add_msg( m_debug, "%s: power %d, c_air %3.2f, c_water %3.2f, water max_in_mps %3.2f",
+             name, total_engine_w, coeff_air_drag(), coeff_water_drag(), max_in_mps );
+    return mps_to_vmiph( max_in_mps );
+}
+
+int vehicle::max_velocity( const bool fueled ) const
+{
+    return is_floating ? max_water_velocity( fueled ) : max_ground_velocity( fueled );
+}
+
+// the same physics as max_ground_velocity, but with a smaller engine power
+int vehicle::safe_ground_velocity( const bool fueled ) const
 {
     int effective_engine_w = total_power_w( fueled, true );
     double c_rolling_drag = coeff_rolling_drag();
@@ -2903,6 +2973,20 @@ int vehicle::safe_velocity( const bool fueled ) const
                          c_rolling_drag * vehicles::rolling_constant_to_variable,
                          -effective_engine_w );
     return mps_to_vmiph( safe_in_mps );
+}
+
+// the same physics as max_water_velocity, but with a smaller engine power
+int vehicle::safe_water_velocity( const bool fueled ) const
+{
+    int total_engine_w = total_power_w( fueled, true );
+    double total_drag = coeff_water_drag() + coeff_air_drag();
+    double safe_in_mps = std::cbrt( total_engine_w / total_drag );
+    return mps_to_vmiph( safe_in_mps );
+}
+
+int vehicle::safe_velocity( const bool fueled ) const
+{
+    return is_floating ? safe_water_velocity( fueled ) : safe_ground_velocity( fueled );
 }
 
 bool vehicle::do_environmental_effects()
@@ -3018,11 +3102,10 @@ void vehicle::noise_and_smoke( int load, time_duration time )
     sounds::ambient_sound( global_pos3(), noise, sound_msgs[lvl] );
 }
 
-float vehicle::wheel_area( bool boat ) const
+float vehicle::wheel_area() const
 {
     float total_area = 0.0f;
-    const auto &wheel_indices = boat ? floating : wheelcache;
-    for( auto &wheel_index : wheel_indices ) {
+    for( auto &wheel_index : wheelcache ) {
         total_area += parts[ wheel_index ].base.wheel_area();
     }
 
@@ -3216,38 +3299,92 @@ double vehicle::coeff_rolling_drag() const
     return coefficient_rolling_resistance;
 }
 
+double vehicle::water_draft() const
+{
+    if( coeff_water_dirty ) {
+        coeff_water_drag();
+    }
+    return draft_m;
+}
+
+bool vehicle::can_float() const
+{
+    if( coeff_water_dirty ) {
+        coeff_water_drag();
+    }
+    // Someday I'll deal with submarines, but now, you can only float if you have freeboard
+    return draft_m < hull_height;
+}
+
+bool vehicle::is_in_water() const
+{
+    return is_floating;
+}
+
 double vehicle::coeff_water_drag() const
 {
     if( !coeff_water_dirty ) {
         return coefficient_water_resistance;
     }
     std::vector<int> structure_indices = all_parts_at_location( part_location_structure );
+    if( structure_indices.empty() ) {
+        // huh?
+        coeff_water_dirty = false;
+        hull_height = 0.3;
+        draft_m = 1.0;
+        return 1250.0;
+    }
+    double hull_coverage = static_cast<double>( floating.size() ) / structure_indices.size();
+
+    int min_x = 0;
+    int max_x = 0;
     int min_y = 0;
     int max_y = 0;
+    // find how many rows and columns the vehicle has
     for( int p : structure_indices ) {
+        min_x = std::min( min_x, parts[p].mount.x );
+        max_x = std::max( max_x, parts[p].mount.x );
         min_y = std::min( min_y, parts[p].mount.y );
         max_y = std::max( max_y, parts[p].mount.y );
     }
-    int width = max_y - min_y;
-    // todo: calculate actual coefficent of water drag
-    // todo: calculate actual draft
-    double draft = 1;
-    constexpr double water_density = 1000; // kg/m^3
-    double c_water_drag = 0.45;
+    // assume a rectangular footprint instead of doing a stepwise integration by row
+    double width = tile_to_width( max_y - min_y + 1 );
+    // only count board board tiles to determine area.
+    double area =  width * ( max_x - min_x + 1 ) * std::max( 0.1, hull_coverage );
+    // treat the hullform as a tetrahedron for half it's length, and a rectangular block
+    // for the rest.  the mass of the water displaced by those shapes is equal to the mass
+    // of the vehicle (Archimedes principle, eh?) and the volume of that water is the volume
+    // of the hull below the waterline divided by the density of water.  apply math to get
+    // depth.
+    // volume of the block = width * length / 2 * depth
+    // volume of the tetrahedron = 1/3 * area of the triangle * depth
+    // area of the triangle = 1/2 triangle length * width = 1/2 * length/2 * width
+    // volume of the tetrahedron = 1/3 * 1/4 * length * width * depth
+    // hull volume underwater = 1/2 * width * length * depth + 1/12 * length * width * depth
+    // 7/12 * length * width * depth = hull_volume = water_mass / water density
+    // water_mass = vehicle_mass
+    // 7/12 * length * width * depth = vehicle_mass / water_density
+    // depth = 12/7 * vehicle_mass / water_density / ( length * width )
+    constexpr double water_density = 1000.0; // kg/m^3
+    draft_m = 12 / 7 * to_kilogram( total_mass() ) / water_density / area;
+    // increase the streamlining as more of the boat is covered in boat boards
+    double c_water_drag = 1.25 - hull_coverage;
+    // hull height starts at 0.3m and goes up as you add more boat boards
+    hull_height = 0.3 + 0.5 * hull_coverage;
     // F_water_drag = c_water_drag * cross_area * 1/2 * water_density * v^2
     // coeff_water_resistance = c_water_drag * cross_area * 1/2 * water_density
-    coefficient_water_resistance = c_water_drag * tile_to_width( width ) * draft *
-                                   0.5 * water_density;
+    coefficient_water_resistance = c_water_drag * width * draft_m * 0.5 * water_density;
     coeff_water_dirty = false;
     return coefficient_water_resistance;
 }
+
 float vehicle::k_traction( float wheel_traction_area ) const
 {
-    if( wheel_traction_area <= 0.01f ) {
-        return 0.0f;
+    if( is_floating ) {
+        return can_float() ? 1.0f : -1.0f;
     }
 
-    const float mass_penalty = ( 1.0f - wheel_traction_area / wheel_area( !floating.empty() ) ) *
+    const float mass_penalty = ( 1.0f - wheel_traction_area / wheel_area() ) *
                                to_kilogram( total_mass() );
 
     float traction = std::min( 1.0f, wheel_traction_area / mass_penalty );
@@ -3275,12 +3412,8 @@ float vehicle::strain() const
     }
 }
 
-bool vehicle::sufficient_wheel_config( bool boat ) const
+bool vehicle::sufficient_wheel_config() const
 {
-    // @todo: Remove the limitations that boats can't move on land
-    if( boat || !floating.empty() ) {
-        return boat && floating.size() > 2;
-    }
     if( wheelcache.empty() ) {
         // No wheels!
         return false;
@@ -3294,16 +3427,14 @@ bool vehicle::sufficient_wheel_config( bool boat ) const
     return true;
 }
 
-bool vehicle::balanced_wheel_config( bool boat ) const
+bool vehicle::balanced_wheel_config() const
 {
     int xmin = INT_MAX;
     int ymin = INT_MAX;
     int xmax = INT_MIN;
     int ymax = INT_MIN;
     // find the bounding box of the wheels
-    // TODO: find convex hull instead
-    const auto &indices = boat ? floating : wheelcache;
-    for( auto &w : indices ) {
+    for( auto &w : wheelcache ) {
         const auto &pt = parts[ w ].mount;
         xmin = std::min( xmin, pt.x );
         ymin = std::min( ymin, pt.y );
@@ -3318,16 +3449,16 @@ bool vehicle::balanced_wheel_config( bool boat ) const
     return true;
 }
 
-bool vehicle::valid_wheel_config( bool boat ) const
+bool vehicle::valid_wheel_config() const
 {
-    return sufficient_wheel_config( boat ) && balanced_wheel_config( boat );
+    return sufficient_wheel_config() && balanced_wheel_config();
 }
 
 float vehicle::steering_effectiveness() const
 {
-    if( !floating.empty() ) {
+    if( is_floating ) {
         // I'M ON A BOAT
-        return 1.0;
+        return can_float() ? 1.0 : 0.0;
     }
 
     if( steering.empty() ) {
@@ -3521,6 +3652,15 @@ int vehicle::total_epower_w( int &engine_epower, bool skip_solar )
         epower += part_epower_w( part );
     }
     return epower;
+}
+
+int vehicle::total_reactor_epower_w() const
+{
+    int epower_w = 0;
+    for( int elem : reactors ) {
+        epower_w += is_part_on( elem ) ? part_epower_w( elem ) : 0;
+    }
+    return epower_w;
 }
 
 void vehicle::power_parts()
@@ -4097,7 +4237,8 @@ void vehicle::place_spawn_items()
 
 void vehicle::gain_moves()
 {
-    if( is_moving() || falling ) {
+    check_falling_or_floating();
+    if( is_moving() || is_falling ) {
         if( !loose_parts.empty() ) {
             shed_loose_parts();
         }
@@ -4111,7 +4252,7 @@ void vehicle::gain_moves()
             velocity -= vslowdown;
         }
     } else {
-        of_turn = 0;
+        of_turn = .001;
     }
     of_turn_carry = 0;
 
@@ -4238,6 +4379,7 @@ void vehicle::refresh()
     precalc_mounts( 0, pivot_rotation[0], pivot_anchor[0] );
     check_environmental_effects = true;
     insides_dirty = true;
+    zones_dirty = true;
     invalidate_mass();
 }
 
@@ -4255,7 +4397,7 @@ void vehicle::refresh_pivot() const
     // Const method, but messes with mutable fields
     pivot_dirty = false;
 
-    if( wheelcache.empty() || !valid_wheel_config( false ) ) {
+    if( wheelcache.empty() || !valid_wheel_config() ) {
         // No usable wheels, use CoM (dragging)
         pivot_cache = local_center_of_mass();
         return;
@@ -4571,6 +4713,12 @@ void vehicle::shift_parts( const point delta )
     }
     labels = new_labels;
 
+    decltype( loot_zones ) new_zones;
+    for( auto const &z : loot_zones ) {
+        new_zones.emplace( z.first - delta, z.second );
+    }
+    loot_zones = new_zones;
+
     pivot_anchor[0] -= delta;
     refresh();
 
@@ -4744,7 +4892,6 @@ int vehicle::damage_direct( int p, int dmg, damage_type type )
 
         invalidate_mass();
         coeff_air_changed = true;
-        coeff_water_changed = true;
     }
 
     if( parts[p].is_fuel_store() ) {
@@ -4995,6 +5142,7 @@ void vehicle::invalidate_mass()
     // Anything that affects mass will also affect the pivot
     pivot_dirty = true;
     coeff_rolling_dirty = true;
+    coeff_water_dirty = true;
 }
 
 void vehicle::refresh_mass() const
@@ -5095,6 +5243,27 @@ bounding_box vehicle::get_bounding_box()
 vehicle_part_range vehicle::get_all_parts() const
 {
     return vehicle_part_range( const_cast<vehicle &>( *this ) );
+}
+
+bool vehicle::refresh_zones()
+{
+    if( zones_dirty ) {
+        decltype( loot_zones ) new_zones;
+        for( auto const &z : loot_zones ) {
+            zone_data zone = z.second;
+            //Get the global position of the first cargo part at the relative coordinate
+
+            tripoint zone_pos = global_part_pos3( part_with_feature( z.first, "CARGO", false ) );
+            zone_pos = g->m.getabs( zone_pos );
+            //Set the position of the zone to that part
+            zone.set_position( std::pair<tripoint, tripoint>( zone_pos, zone_pos ), false );
+            new_zones.emplace( z.first, zone );
+        }
+        loot_zones = new_zones;
+        zones_dirty = false;
+        return true;
+    }
+    return false;
 }
 
 template<>

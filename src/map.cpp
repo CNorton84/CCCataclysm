@@ -4,6 +4,7 @@
 #include "artifact.h"
 #include "calendar.h"
 #include "coordinate_conversions.h"
+#include "clzones.h"
 #include "debug.h"
 #include "drawing_primitives.h"
 #include "event.h"
@@ -256,6 +257,7 @@ void map::clear_vehicle_list( const int zlev )
 {
     auto &ch = get_cache( zlev );
     ch.vehicle_list.clear();
+    ch.zone_vehicles.clear();
 }
 
 void map::update_vehicle_list( submap *const to, const int zlev )
@@ -264,6 +266,9 @@ void map::update_vehicle_list( submap *const to, const int zlev )
     auto &ch = get_cache( zlev );
     for( auto &elem : to->vehicles ) {
         ch.vehicle_list.insert( elem );
+        if( !elem->loot_zones.empty() ) {
+            ch.zone_vehicles.insert( elem );
+        }
     }
 }
 
@@ -287,6 +292,7 @@ std::unique_ptr<vehicle> map::detach_vehicle( vehicle *veh )
         if( current_submap->vehicles[i] == veh ) {
             const int zlev = veh->smz;
             ch.vehicle_list.erase( veh );
+            ch.zone_vehicles.erase( veh );
             reset_vehicle_cache( zlev );
             current_submap->vehicles.erase( current_submap->vehicles.begin() + i );
             if( veh->tracking_on ) {
@@ -366,7 +372,7 @@ bool map::vehproceed()
     if( cur_veh == nullptr ) {
         for( auto &vehs_v : vehs ) {
             vehicle &cveh = *vehs_v.v;
-            if( cveh.falling ) {
+            if( cveh.is_falling ) {
                 cur_veh = vehs_v.v;
                 break;
             }
@@ -378,29 +384,6 @@ bool map::vehproceed()
     }
 
     return cur_veh->act_on_map();
-}
-
-float map::vehicle_buoyancy( const vehicle &veh ) const
-{
-    const auto &float_indices = veh.floating;
-    const int num = float_indices.size();
-    int moored = 0;
-    float total_wheel_area = 0.0f;
-    for( int w = 0; w < num; w++ ) {
-        const int p = float_indices[w];
-        const tripoint pp = veh.global_part_pos3( p );
-        total_wheel_area += veh.parts[ p ].wheel_width() * veh.parts[ p ].wheel_diameter();
-
-        if( !has_flag( "SWIMMABLE", pp ) ) {
-            moored++;
-        }
-    }
-
-    if( moored > num - 1 ) {
-        return 0.0f;
-    }
-
-    return total_wheel_area;
 }
 
 static bool sees_veh( const Creature &c, vehicle &veh, bool force_recalc )
@@ -511,7 +494,7 @@ void map::move_vehicle( vehicle &veh, const tripoint &dp, const tileray &facing 
     }
 
     // If not enough wheels, mess up the ground a bit.
-    if( !vertical && !veh.valid_wheel_config( !veh.floating.empty() ) ) {
+    if( !vertical && !veh.valid_wheel_config() && !veh.is_in_water() ) {
         veh.velocity += veh.velocity < 0 ? 2000 : -2000;
         for( const auto &p : veh.get_points() ) {
             const ter_id &pter = ter( p );
@@ -747,6 +730,55 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
 
     // Return the impulse of the collision
     return dmg_veh1;
+}
+
+bool map::check_vehicle_zones( const int zlev )
+{
+    for( auto veh : get_cache( zlev ).zone_vehicles ) {
+        if( veh->zones_dirty ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
+{
+    std::vector<zone_data *> veh_zones;
+    bool rebuild = false;
+    for( auto veh : get_cache( zlev ).zone_vehicles ) {
+        if( veh->refresh_zones() ) {
+            rebuild = true;
+        }
+        for( auto &zone : veh->loot_zones ) {
+            veh_zones.emplace_back( &zone.second );
+        }
+    }
+    if( rebuild ) {
+        zone_manager::get_manager().cache_vzones();
+    }
+    return veh_zones;
+}
+
+void map::register_vehicle_zone( vehicle *veh, const int zlev )
+{
+    auto &ch = get_cache( zlev );
+    ch.zone_vehicles.insert( veh );
+}
+
+bool map::deregister_vehicle_zone( zone_data &zone )
+{
+    if( const cata::optional<vpart_reference> vp = g->m.veh_at( g->m.getlocal(
+                zone.get_start_point() ) ).part_with_feature( "CARGO", false ) ) {
+        auto bounds = vp->vehicle().loot_zones.equal_range( vp->mount() );
+        for( auto it = bounds.first; it != bounds.second; it++ ) {
+            if( &zone == &( it->second ) ) {
+                vp->vehicle().loot_zones.erase( it );
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // 3D vehicle functions
@@ -1021,9 +1053,10 @@ vehicle *map::displace_vehicle( tripoint &p, const tripoint &dp )
         g->setremoteveh( veh );
     }
 
-    if( !veh->falling ) {
-        veh->falling = vehicle_falling( *veh );
-    }
+    veh->check_falling_or_floating();
+
+    //global positions of vehicle loot zones have changed.
+    veh->zones_dirty = true;
 
     on_vehicle_moved( veh->smz );
     return veh;
@@ -1960,7 +1993,7 @@ void map::drop_vehicle( const tripoint &p )
         return;
     }
 
-    vp->vehicle().falling = true;
+    vp->vehicle().is_falling = true;
 }
 
 void map::drop_fields( const tripoint &p )
@@ -4700,6 +4733,9 @@ std::list<item> map::use_charges( const tripoint &origin, const int range,
                                   const itype_id type, long &quantity )
 {
     std::list<item> ret;
+
+    // We prefer infinite map sources where available, so search for those
+    // first
     for( const tripoint &p : closest_tripoints_first( range, origin ) ) {
         // can not reach this -> can not access its contents
         if( origin != p && !clear_path( origin, p, range, 1, 100 ) ) {
@@ -4712,6 +4748,13 @@ std::list<item> map::use_charges( const tripoint &origin, const int range,
             ret.push_back( water );
             quantity = 0;
             return ret;
+        }
+    }
+
+    for( const tripoint &p : closest_tripoints_first( range, origin ) ) {
+        // can not reach this -> can not access its contents
+        if( origin != p && !clear_path( origin, p, range, 1, 100 ) ) {
+            continue;
         }
 
         if( has_furn( p ) ) {
@@ -6151,6 +6194,7 @@ void map::shift( const int sx, const int sy )
         for( vehicle *veh : get_cache( gridz ).vehicle_list ) {
             veh->smx += sx;
             veh->smy += sy;
+            veh->zones_dirty = true;
         }
     }
 
@@ -6160,7 +6204,7 @@ void map::shift( const int sx, const int sy )
     for( int gridz = zmin; gridz <= zmax; gridz++ ) {
         // Clear vehicle list and rebuild after shift
         clear_vehicle_cache( gridz );
-        get_cache( gridz ).vehicle_list.clear();
+        clear_vehicle_list( gridz );
         if( sx >= 0 ) {
             for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
                 if( sy >= 0 ) {
@@ -6415,6 +6459,9 @@ void map::loadn( const int gridx, const int gridy, const int gridz, const bool u
             // Only add if not tracking already.
             if( map_cache.vehicle_list.find( it ) == map_cache.vehicle_list.end() ) {
                 map_cache.vehicle_list.insert( it );
+                if( !it->loot_zones.empty() ) {
+                    map_cache.zone_vehicles.insert( it );
+                }
                 add_vehicle_to_cache( it );
             }
         }
