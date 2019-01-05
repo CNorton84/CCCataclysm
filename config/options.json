@@ -141,7 +141,7 @@
   },
   { "info": "If true, replaces some TTF rendered text with tiles.", "default": "Default: True", "name": "USE_TILES", "value": "true"
   },
-  { "info": "Choose the tileset you want to use.", "default": "Default: ChestHole - Values: blockhead, ChestHole16, ChestHole32, ChestHole_iso, ChestHole, deon, HitButton_iso, hoder, MSX++DEAD_PEOPLE, MShock24Modded, MShock32Modded, MshockXottoplus, retroascii, retrodays, Boardgame-Style@, tsu", "name": "TILES", "value": "MSX++DEAD_PEOPLE"
+  { "info": "Choose the tileset you want to use.", "default": "Default: MSX++DEAD_PEOPLE - Values: blockhead, ChestHole16, ChestHole32, ChestHole_iso, ChestHole, deon, HitButton_iso, hoder, MSX++DEAD_PEOPLE, MShock24Modded, MShock32Modded, MshockXottoplus, retroascii, retrodays, Boardgame-Style@, tsu", "name": "TILES", "value": "MSX++DEAD_PEOPLE"
   },
   { "info": "If true, shows the pixel-detail minimap in game after the save is loaded.  Use the 'Toggle Pixel Minimap' action key to change its visibility during gameplay.", "default": "Default: True", "name": "PIXEL_MINIMAP", "value": "true"
   },
