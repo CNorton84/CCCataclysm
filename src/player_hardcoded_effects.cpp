@@ -62,6 +62,7 @@ const efftype_id effect_panacea( "panacea" );
 const efftype_id effect_rat( "rat" );
 const efftype_id effect_recover( "recover" );
 const efftype_id effect_seizure("seizure");
+const efftype_id effect_seizure_stamina_drain("seizure_stamina_drain");
 const efftype_id effect_shakes( "shakes" );
 const efftype_id effect_sleep( "sleep" );
 const efftype_id effect_slept_through_alarm( "slept_through_alarm" );
@@ -457,10 +458,9 @@ void player::hardcoded_effects( effect &it )
             seize_chance = to_turns<int>(dur) + 300;
         }
         if (((one_in(seize_chance)) || (dur <= 1_turns)) && (!triggered)) {
-
             triggered = true;
             add_msg_if_player(m_bad, _("You lose consciousness and begin to seize."));
-            sounds::sound(pos(), 10, sounds::sound_t::movement, "");
+            sounds::sound(pos(), 10, sounds::sound_t::movement, "Uh... you shouldn't see this but idk", true );
             add_effect(effect_narcosis, 5_minutes);
             fall_asleep(5_minutes);
             add_effect(effect_downed, 5_minutes, num_bp, false, 10000, true);
@@ -474,6 +474,7 @@ void player::hardcoded_effects( effect &it )
             }
             mod_stat("stamina", -1000);
             add_msg_if_player(m_bad, _("You gasp for air.  That seizure took a lot out of you."));
+            add_effect(effect_seizure_stamina_drain, 5_minutes);
         }
         if (triggered) {
             // Set ourselves up for removal

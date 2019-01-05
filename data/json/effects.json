@@ -1375,6 +1375,18 @@
         },
         "show_in_info": true
     },
+	{
+	
+		"type": "effect_type",
+        "id": "seizure_stamina_drain",
+        "name": ["Ongoing Seizure"],
+        "desc": ["You are experiencing a seizure and have no awareness of the outside world."],
+        "rating": "bad",
+        "base_mods": {
+            "stamina_min": [-100]
+        },
+        "show_in_info": true
+    },
 	
     {
         "type": "effect_type",
