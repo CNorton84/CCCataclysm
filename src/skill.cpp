@@ -1,5 +1,12 @@
 #include "skill.h"
 
+#include <stddef.h>
+#include <algorithm>
+#include <iterator>
+#include <array>
+#include <memory>
+#include <utility>
+
 #include "debug.h"
 #include "item.h"
 #include "json.h"
@@ -7,9 +14,6 @@
 #include "recipe.h"
 #include "rng.h"
 #include "translations.h"
-
-#include <algorithm>
-#include <iterator>
 
 // TODO: a map, for Barry's sake make this a map.
 std::vector<Skill> Skill::skills;
@@ -84,8 +88,7 @@ void Skill::load_skill( JsonObject &jsobj )
         return s._ident == ident;
     } ), end( skills ) );
 
-    const Skill sk( ident, _( jsobj.get_string( "name" ).c_str() ),
-                    _( jsobj.get_string( "description" ).c_str() ),
+    const Skill sk( ident, _( jsobj.get_string( "name" ) ), _( jsobj.get_string( "description" ) ),
                     jsobj.get_tags( "tags" ) );
 
     if( sk.is_contextual_skill() ) {
@@ -142,7 +145,7 @@ void SkillLevel::train( int amount, bool skip_scaling )
     } else {
         const double scaling = get_option<float>( "SKILL_TRAINING_SPEED" );
         if( scaling > 0.0 ) {
-            _exercise += divide_roll_remainder( amount * scaling, 1.0 );
+            _exercise += roll_remainder( amount * scaling );
         }
     }
 
@@ -179,7 +182,7 @@ bool SkillLevel::isRusting() const
 bool SkillLevel::rust( bool charged_bio_mem )
 {
     const time_duration delta = calendar::turn - _lastPracticed;
-    if( _level <= 0 || delta <= 0 || delta % rustRate( _level ) != 0 ) {
+    if( _level <= 0 || delta <= 0_turns || delta % rustRate( _level ) != 0_turns ) {
         return false;
     }
 
@@ -263,7 +266,7 @@ int SkillLevelMap::get_skill_level( const skill_id &ident ) const
 
 int SkillLevelMap::get_skill_level( const skill_id &ident, const item &context ) const
 {
-    auto id = context.is_null() ? ident : context.contextualize_skill( ident );
+    const auto id = context.is_null() ? ident : context.contextualize_skill( ident );
     return get_skill_level( id );
 }
 
@@ -316,8 +319,8 @@ bool SkillLevelMap::has_recipe_requirements( const recipe &rec ) const
     return exceeds_recipe_requirements( rec ) >= 0;
 }
 
-//Actually take the difference in barter skill between the two parties involved
-//Caps at 200% when you are 5 levels ahead, int comparison is handled in npctalk.cpp
+// Actually take the difference in barter skill between the two parties involved
+// Caps at 200% when you are 5 levels ahead, int comparison is handled in npctalk.cpp
 double price_adjustment( int barter_skill )
 {
     if( barter_skill <= 0 ) {
@@ -336,6 +339,7 @@ double price_adjustment( int barter_skill )
         case 4:
             return 1.65;
         default:
-            return 1.0;//should never occur
+            // Should never occur
+            return 1.0;
     }
 }

@@ -1,15 +1,18 @@
 #include "damage.h"
 
+#include <stddef.h>
+#include <algorithm>
+#include <map>
+#include <numeric>
+#include <utility>
+
 #include "debug.h"
 #include "item.h"
 #include "json.h"
 #include "monster.h"
 #include "mtype.h"
 #include "translations.h"
-
-#include <algorithm>
-#include <map>
-#include <numeric>
+#include "cata_utility.h"
 
 bool damage_unit::operator==( const damage_unit &other ) const
 {
@@ -20,7 +23,7 @@ bool damage_unit::operator==( const damage_unit &other ) const
            damage_multiplier == other.damage_multiplier;
 }
 
-damage_instance::damage_instance() { }
+damage_instance::damage_instance() = default;
 damage_instance damage_instance::physical( float bash, float cut, float stab, float arpen )
 {
     damage_instance d;
@@ -85,9 +88,9 @@ bool damage_instance::empty() const
     return damage_units.empty();
 }
 
-void damage_instance::add( const damage_instance &b )
+void damage_instance::add( const damage_instance &added_di )
 {
-    for( auto &added_du : b.damage_units ) {
+    for( auto &added_du : added_di.damage_units ) {
         add( added_du );
     }
 }
@@ -139,7 +142,7 @@ bool damage_instance::operator==( const damage_instance &other ) const
 void damage_instance::deserialize( JsonIn &jsin )
 {
     JsonObject jo( jsin );
-    // @todo Clean up
+    // TODO: Clean up
     damage_units = load_damage_instance( jo ).damage_units;
 }
 

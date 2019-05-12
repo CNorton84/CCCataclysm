@@ -26,8 +26,6 @@ class WrongJSONItem(Exception):
 # there may be some non-json files in data/raw
 not_json = {os.path.normpath(i) for i in {
     "sokoban.txt",
-    "main.lua",
-    "preload.lua",
     "LOADING_ORDER.md"
 }}
 
@@ -42,7 +40,6 @@ warning_suppressed_list = {os.path.normpath(i) for i in {
     "data/json/vehicleparts/",
     "data/raw/keybindings.json",
     "data/mods/alt_map_key/overmap_terrain.json",
-    "data/mods/Arcana/monsters.json",
     "data/mods/DeoxyMod/Deoxy_vehicle_parts.json",
     "data/mods/More_Survival_Tools/start_locations.json",
     "data/mods/NPC_Traits/npc_classes.json",
@@ -77,6 +74,7 @@ ignorable = {
     "MIGRATION",
     "mod_tileset",
     "monitems",
+    "monster_adjustment",
     "MONSTER_BLACKLIST",
     "MONSTER_FACTION",
     "monstergroup",
@@ -92,6 +90,7 @@ ignorable = {
     "region_settings",
     "requirement",
     "rotatable_symbol",
+    "skill_boost",
     "SPECIES",
     "trait_group",
     "uncraft",
@@ -137,10 +136,13 @@ automatically_convertible = {
     "morale_type",
     "npc",
     "npc_class",
+    "overmap_land_use_code",
     "overmap_terrain",
+    "PET_ARMOR",
     "skill",
     "snippet",
     "speech",
+    "SPELL",
     "start_location",
     "STATIONARY_ITEM",
     "terrain",
@@ -507,7 +509,7 @@ def extract_dynamic_line(line, outfile):
         extract_dynamic_line_optional(line, "npc_female", outfile)
         extract_dynamic_line_optional(line, "yes", outfile)
         extract_dynamic_line_optional(line, "no", outfile)
-    else:
+    elif type(line) == str:
         writestr(outfile, line)
 
 def extract_talk_response(response, outfile):
@@ -860,6 +862,9 @@ def extract(item, infilename):
             c = None
         writestr(outfile, item["description"], comment=c, **kwargs)
         wrote = True
+    if "detailed_definition" in item:
+        writestr(outfile, item["detailed_definition"], **kwargs)
+        wrote = True
     if "sound" in item:
         writestr(outfile, item["sound"], **kwargs)
         wrote = True
@@ -906,6 +911,12 @@ def extract(item, infilename):
     if "stop_phrase" in item:
        writestr(outfile, item["stop_phrase"], **kwargs)
        wrote = True
+    if "special_attacks" in item:
+        special_attacks = item["special_attacks"]
+        for special_attack in special_attacks:
+            if "description" in special_attack:
+                writestr(outfile, special_attack["description"], **kwargs)
+                wrote = True
     if not wrote:
         if not warning_supressed(infilename):
             print("WARNING: {}: nothing translatable found in item: {}".format(infilename, item))

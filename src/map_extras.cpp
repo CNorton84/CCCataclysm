@@ -1,5 +1,16 @@
 #include "map_extras.h"
 
+#include <stdlib.h>
+#include <math.h>
+#include <array>
+#include <list>
+#include <memory>
+#include <set>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "cellular_automata.h"
 #include "debug.h"
 #include "field.h"
 #include "fungal_effects.h"
@@ -7,8 +18,8 @@
 #include "map.h"
 #include "mapdata.h"
 #include "mapgen_functions.h"
-#include "omdata.h"
 #include "overmapbuffer.h"
+#include "overmap.h"
 #include "rng.h"
 #include "trap.h"
 #include "veh_type.h"
@@ -16,6 +27,20 @@
 #include "vehicle_group.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "calendar.h"
+#include "cata_utility.h"
+#include "enums.h"
+#include "game_constants.h"
+#include "int_id.h"
+#include "item.h"
+#include "line.h"
+#include "optional.h"
+#include "string_id.h"
+#include "translations.h"
+#include "vpart_reference.h"
+#include "type_id.h"
+
+class npc_template;
 
 namespace MapExtras
 {
@@ -28,6 +53,7 @@ static const mtype_id mon_blank( "mon_blank" );
 static const mtype_id mon_zombie_smoker( "mon_zombie_smoker" );
 static const mtype_id mon_zombie_scientist( "mon_zombie_scientist" );
 static const mtype_id mon_chickenbot( "mon_chickenbot" );
+static const mtype_id mon_dispatch( "mon_dispatch" );
 static const mtype_id mon_gelatin( "mon_gelatin" );
 static const mtype_id mon_flaming_eye( "mon_flaming_eye" );
 static const mtype_id mon_gracke( "mon_gracke" );
@@ -41,7 +67,6 @@ static const mtype_id mon_zombie_spitter( "mon_zombie_spitter" );
 static const mtype_id mon_zombie_soldier( "mon_zombie_soldier" );
 static const mtype_id mon_zombie_military_pilot( "mon_zombie_military_pilot" );
 static const mtype_id mon_zombie_bio_op( "mon_zombie_bio_op" );
-static const mtype_id mon_zombie_grenadier( "mon_zombie_grenadier" );
 static const mtype_id mon_shia( "mon_shia" );
 static const mtype_id mon_spider_web( "mon_spider_web" );
 static const mtype_id mon_jabberwock( "mon_jabberwock" );
@@ -228,7 +253,7 @@ void mx_military( map &m, const tripoint & )
                 if( one_in( 2 ) ) {
                     m.add_spawn( mon_zombie_bio_op, 1, p->x, p->y );
                 } else {
-                    m.add_spawn( mon_zombie_grenadier, 1, p->x, p->y );
+                    m.add_spawn( mon_dispatch, 1, p->x, p->y );
                 }
             } else {
                 m.place_items( "map_extra_military", 100, *p, *p, true, 0 );
@@ -315,38 +340,81 @@ void mx_collegekids( map &m, const tripoint & )
 
 void mx_roadblock( map &m, const tripoint &abs_sub )
 {
-    // Currently doesn't handle adjacency to turns or intersections well, we may want to abort in future
-    bool rotated = false;
     std::string north = overmap_buffer.ter( abs_sub.x / 2, abs_sub.y / 2 - 1, abs_sub.z ).id().c_str();
     std::string south = overmap_buffer.ter( abs_sub.x / 2, abs_sub.y / 2 + 1, abs_sub.z ).id().c_str();
-    if( north.find( "road_" ) == 0 && south.find( "road_" ) == 0 ) {
-        rotated = true;
-        //Rotate the terrain -90 so that all of the items will be in the correct position
-        //when the entire map is rotated at the end
-        m.rotate( 3 );
+    std::string west = overmap_buffer.ter( abs_sub.x / 2 - 1, abs_sub.y / 2, abs_sub.z ).id().c_str();
+    std::string east = overmap_buffer.ter( abs_sub.x / 2 + 1, abs_sub.y / 2, abs_sub.z ).id().c_str();
+
+    bool northroad = false;
+    bool eastroad = false;
+    bool southroad = false;
+    bool westroad = false;
+
+    if( north.find( "road_" ) == 0 ) {
+        northroad = true;
     }
+    if( east.find( "road_" ) == 0 ) {
+        eastroad = true;
+    }
+    if( south.find( "road_" ) == 0 ) {
+        southroad = true;
+    }
+    if( west.find( "road_" ) == 0 ) {
+        westroad = true;
+    }
+
+    const auto spawn_turret = [&]( int x, int y ) {
+        if( one_in( 2 ) ) {
+            m.add_spawn( mon_turret_bmg, 1, x, y );
+        } else {
+            m.add_spawn( mon_turret_rifle, 1, x, y );
+        }
+    };
     bool mil = false;
     if( one_in( 3 ) ) {
         mil = true;
     }
     if( mil ) { //Military doesn't joke around with their barricades!
-        line( &m, t_fence_barbed, SEEX * 2 - 1, 4, SEEX * 2 - 1, 10 );
-        line( &m, t_fence_barbed, SEEX * 2 - 3, 13, SEEX * 2 - 3, 19 );
-        line( &m, t_fence_barbed, 3, 4, 3, 10 );
-        line( &m, t_fence_barbed, 1, 13, 1, 19 );
+
+        if( northroad ) {
+            line( &m, t_fence_barbed, 4, 3, 10, 3 );
+            line( &m, t_fence_barbed, 13, 3, 19, 3 );
+        }
+        if( eastroad ) {
+            line( &m, t_fence_barbed, SEEX * 2 - 3, 4, SEEX * 2 - 3, 10 );
+            line( &m, t_fence_barbed, SEEX * 2 - 3, 13, SEEX * 2 - 3, 19 );
+        }
+        if( southroad ) {
+            line( &m, t_fence_barbed, 4, SEEY * 2 - 3, 10, SEEY * 2 - 3 );
+            line( &m, t_fence_barbed, 13, SEEY * 2 - 3, 19, SEEY * 2 - 3 );
+        }
+        if( eastroad ) {
+            line( &m, t_fence_barbed, 3, 4, 3, 10 );
+            line( &m, t_fence_barbed, 3, 13, 3, 19 );
+        }
         if( one_in( 3 ) ) { // Chicken delivery
-            m.add_vehicle( vgroup_id( "military_vehicles" ), tripoint( 12, SEEY * 2 - 5, abs_sub.z ), 0, 70,
+            m.add_vehicle( vgroup_id( "military_vehicles" ), tripoint( 12, SEEY * 2 - 7, abs_sub.z ), 0, 70,
                            -1 );
             m.add_spawn( mon_chickenbot, 1, 12, 12 );
         } else if( one_in( 2 ) ) { // TAAANK
             // The truck's wrecked...with fuel.  Explosive barrel?
-            m.add_vehicle( vproto_id( "military_cargo_truck" ), 12, SEEY * 2 - 5, 0, 70, -1 );
+            m.add_vehicle( vproto_id( "military_cargo_truck" ), 12, SEEY * 2 - 8, 0, 70, -1 );
             m.add_spawn( mon_tankbot, 1, 12, 12 );
         } else {  // Vehicle & turrets
-            m.add_vehicle( vgroup_id( "military_vehicles" ), tripoint( 12, SEEY * 2 - 5, abs_sub.z ), 0, 70,
+            m.add_vehicle( vgroup_id( "military_vehicles" ), tripoint( 12, SEEY * 2 - 10, abs_sub.z ), 0, 70,
                            -1 );
-            m.add_spawn( mon_turret_bmg, 1, 12, 12 );
-            m.add_spawn( mon_turret_rifle, 1, 9, 12 );
+            if( northroad ) {
+                spawn_turret( 12, 6 );
+            }
+            if( eastroad ) {
+                spawn_turret( 18, 12 );
+            }
+            if( southroad ) {
+                spawn_turret( 12, 18 );
+            }
+            if( westroad ) {
+                spawn_turret( 6, 12 );
+            }
         }
 
         int num_bodies = dice( 2, 5 );
@@ -358,20 +426,35 @@ void mx_roadblock( map &m, const tripoint &abs_sub )
 
                 int splatter_range = rng( 1, 3 );
                 for( int j = 0; j <= splatter_range; j++ ) {
-                    m.add_field( {p->x - ( j * 1 ), p->y + ( j * 1 ), p->z}, fd_blood, 1, 0 );
+                    m.add_field( {p->x - ( j * 1 ), p->y + ( j * 1 ), p->z}, fd_blood, 1, 0_turns );
                 }
             }
         }
     } else { // Police roadblock
-        line_furn( &m, f_barricade_road, SEEX * 2 - 1, 4, SEEX * 2 - 1, 10 );
-        line_furn( &m, f_barricade_road, SEEX * 2 - 3, 13, SEEX * 2 - 3, 19 );
-        line_furn( &m, f_barricade_road, 3, 4, 3, 10 );
-        line_furn( &m, f_barricade_road, 1, 13, 1, 19 );
-        m.add_vehicle( vproto_id( "policecar" ), 8, 5, 20 );
-        m.add_vehicle( vproto_id( "policecar" ), 16, SEEY * 2 - 5, 145 );
-        m.add_spawn( mon_turret, 1, 1, 12 );
-        m.add_spawn( mon_turret, 1, SEEX * 2 - 1, 12 );
 
+        if( northroad ) {
+            line_furn( &m, f_barricade_road, 4, 3, 10, 3 );
+            line_furn( &m, f_barricade_road, 13, 3, 19, 3 );
+            m.add_spawn( mon_turret, 1, 12, 1 );
+        }
+        if( eastroad ) {
+            line_furn( &m, f_barricade_road, SEEX * 2 - 3, 4, SEEX * 2 - 3, 10 );
+            line_furn( &m, f_barricade_road, SEEX * 2 - 3, 13, SEEX * 2 - 3, 19 );
+            m.add_spawn( mon_turret, 1, SEEX * 2 - 1, 12 );
+        }
+        if( southroad ) {
+            line_furn( &m, f_barricade_road, 4, SEEY * 2 - 3, 10, SEEY * 2 - 3 );
+            line_furn( &m, f_barricade_road, 13, SEEY * 2 - 3, 19, SEEY * 2 - 3 );
+            m.add_spawn( mon_turret, 1, 12, SEEY * 2 - 1 );
+        }
+        if( westroad ) {
+            line_furn( &m, f_barricade_road, 3, 4, 3, 10 );
+            line_furn( &m, f_barricade_road, 3, 13, 3, 19 );
+            m.add_spawn( mon_turret, 1, 1, 12 );
+        }
+
+        m.add_vehicle( vproto_id( "policecar" ), 8, 6, 20 );
+        m.add_vehicle( vproto_id( "policecar" ), 16, SEEY * 2 - 6, 145 );
         int num_bodies = dice( 1, 6 );
         for( int i = 0; i < num_bodies; i++ ) {
             if( const auto p = random_point( m, [&m]( const tripoint & n ) {
@@ -381,13 +464,48 @@ void mx_roadblock( map &m, const tripoint &abs_sub )
 
                 int splatter_range = rng( 1, 3 );
                 for( int j = 0; j <= splatter_range; j++ ) {
-                    m.add_field( {p->x + ( j * 1 ), p->y - ( j * 1 ), p->z}, fd_blood, 1, 0 );
+                    m.add_field( {p->x + ( j * 1 ), p->y - ( j * 1 ), p->z}, fd_blood, 1, 0_turns );
                 }
             }
         }
     }
-    if( rotated ) {
-        m.rotate( 1 );
+}
+
+void mx_bandits_block( map &m, const tripoint &abs_sub )
+{
+    const oter_id &north = overmap_buffer.ter( abs_sub.x, abs_sub.y - 1, abs_sub.z );
+    const oter_id &south = overmap_buffer.ter( abs_sub.x, abs_sub.y + 1, abs_sub.z );
+    const oter_id &west = overmap_buffer.ter( abs_sub.x - 1, abs_sub.y, abs_sub.z );
+    const oter_id &east = overmap_buffer.ter( abs_sub.x + 1, abs_sub.y, abs_sub.z );
+
+    const bool forest_at_north = is_ot_type( "forest", north );
+    const bool forest_at_south = is_ot_type( "forest", south );
+    const bool forest_at_west = is_ot_type( "forest", west );
+    const bool forest_at_east = is_ot_type( "forest", east );
+
+    if( forest_at_north && forest_at_south ) {
+        line( &m, t_trunk, 1, 3, 1, 6 );
+        line( &m, t_trunk, 1, 8, 1, 13 );
+        line( &m, t_trunk, 2, 14, 2, 17 );
+        line( &m, t_trunk, 1, 18, 2, 22 );
+        m.ter_set( 1, 2, t_stump );
+        m.ter_set( 1, 20, t_stump );
+        m.ter_set( 1, 1, t_improvised_shelter );
+        m.place_npc( 2, 19, string_id<npc_template>( "bandit" ) );
+        if( one_in( 2 ) ) {
+            m.place_npc( 1, 1, string_id<npc_template>( "bandit" ) );
+        }
+    } else if( forest_at_west && forest_at_east ) {
+        line( &m, t_trunk, 1, 1, 3, 1 );
+        line( &m, t_trunk, 5, 1, 10, 1 );
+        line( &m, t_trunk, 11, 3, 16, 3 );
+        line( &m, t_trunk, 17, 2, 21, 2 );
+        m.ter_set( 22, 2, t_stump );
+        m.ter_set( 0, 1, t_improvised_shelter );
+        m.place_npc( 20, 3, string_id<npc_template>( "bandit" ) );
+        if( one_in( 2 ) ) {
+            m.place_npc( 0, 1, string_id<npc_template>( "bandit" ) );
+        }
     }
 }
 
@@ -447,16 +565,6 @@ void mx_drugdeal( map &m, const tripoint &abs_sub )
         } while( tries < 10 && m.impassable( x, y ) );
 
         if( tries < 10 ) { // We found a valid spot!
-            if( one_in( 10 ) ) {
-                m.add_spawn( mon_zombie_spitter, 1, x, y );
-            } else {
-                m.place_items( "map_extra_drugdeal", 100, x, y, x, y, true, 0 );
-                int splatter_range = rng( 1, 3 );
-                for( int j = 0; j <= splatter_range; j++ ) {
-                    m.add_field( {x + ( j * x_offset ), y + ( j * y_offset ), abs_sub.z},
-                                 fd_blood, 1, 0 );
-                }
-            }
             if( a_has_drugs && num_drugs > 0 ) {
                 int drugs_placed = rng( 2, 6 );
                 if( drugs_placed > num_drugs ) {
@@ -464,6 +572,16 @@ void mx_drugdeal( map &m, const tripoint &abs_sub )
                     num_drugs = 0;
                 }
                 m.spawn_item( x, y, drugtype, 0, drugs_placed );
+            }
+            if( one_in( 10 ) ) {
+                m.add_spawn( mon_zombie_spitter, 1, x, y );
+            } else {
+                m.place_items( "map_extra_drugdeal", 100, x, y, x, y, true, 0 );
+                int splatter_range = rng( 1, 3 );
+                for( int j = 0; j <= splatter_range; j++ ) {
+                    m.add_field( {x + ( j * x_offset ), y + ( j * y_offset ), abs_sub.z},
+                                 fd_blood, 1, 0_turns );
+                }
             }
         }
     }
@@ -496,7 +614,7 @@ void mx_drugdeal( map &m, const tripoint &abs_sub )
                 int splatter_range = rng( 1, 3 );
                 for( int j = 0; j <= splatter_range; j++ ) {
                     m.add_field( {x + ( j * x_offset ), y + ( j * y_offset ), abs_sub.z},
-                                 fd_blood, 1, 0 );
+                                 fd_blood, 1, 0_turns );
                 }
                 if( !a_has_drugs && num_drugs > 0 ) {
                     int drugs_placed = rng( 2, 6 );
@@ -634,16 +752,79 @@ void mx_crater( map &m, const tripoint &abs_sub )
     }
 }
 
-void mx_fumarole( map &m, const tripoint & )
+void place_fumarole( map &m, int x1, int y1, int x2, int y2, std::set<point> &ignited )
 {
-    int x1 = rng( 0,    SEEX     - 1 ), y1 = rng( 0,    SEEY     - 1 ),
-        x2 = rng( SEEX, SEEX * 2 - 1 ), y2 = rng( SEEY, SEEY * 2 - 1 );
+    // Tracks points nearby for ignition after the lava is placed
+    //std::set<point> ignited;
+
     std::vector<point> fumarole = line_to( x1, y1, x2, y2, 0 );
     for( auto &i : fumarole ) {
         m.ter_set( i.x, i.y, t_lava );
+
+        // Add all adjacent tiles (even on diagonals) for possible ignition
+        // Since they're being added to a set, duplicates won't occur
+        ignited.insert( point( i.x - 1, i.y - 1 ) );
+        ignited.insert( point( i.x,     i.y - 1 ) );
+        ignited.insert( point( i.x + 1, i.y - 1 ) );
+        ignited.insert( point( i.x - 1, i.y ) );
+        ignited.insert( point( i.x + 1, i.y ) );
+        ignited.insert( point( i.x - 1, i.y + 1 ) );
+        ignited.insert( point( i.x,     i.y + 1 ) );
+        ignited.insert( point( i.x + 1, i.y + 1 ) );
+
         if( one_in( 6 ) ) {
             m.spawn_item( i.x - 1, i.y - 1, "chunk_sulfur" );
         }
+    }
+
+}
+
+void mx_fumarole( map &m, const tripoint &abs_sub )
+{
+    if( abs_sub.z <= 0 ) {
+        int x1 = rng( 0,    SEEX     - 1 ), y1 = rng( 0,    SEEY     - 1 ),
+            x2 = rng( SEEX, SEEX * 2 - 1 ), y2 = rng( SEEY, SEEY * 2 - 1 );
+
+        // Pick a random cardinal direction to also spawn lava in
+        // This will make the lava a single connected line, not just on diagonals
+        std::vector<direction> possibilities;
+        possibilities.push_back( EAST );
+        possibilities.push_back( WEST );
+        possibilities.push_back( NORTH );
+        possibilities.push_back( SOUTH );
+        const direction extra_lava_dir = random_entry( possibilities );
+        int x_extra = 0;
+        int y_extra = 0;
+        switch( extra_lava_dir ) {
+            case NORTH:
+                y_extra = -1;
+                break;
+            case EAST:
+                x_extra = 1;
+                break;
+            case SOUTH:
+                y_extra = 1;
+                break;
+            case WEST:
+                x_extra = -1;
+                break;
+            default:
+                break;
+        }
+
+        std::set<point> ignited;
+        place_fumarole( m, x1, y1, x2, y2, ignited );
+        place_fumarole( m, x1 + x_extra, y1 + y_extra, x2 + x_extra, y2 + y_extra, ignited );
+
+        for( auto &i : ignited ) {
+            // Don't need to do anything to tiles that already have lava on them
+            if( m.ter( i.x, i.y ) != t_lava ) {
+                // Spawn an intense but short-lived fire
+                // Any furniture or buildings will catch fire, otherwise it will burn out quickly
+                m.add_field( tripoint( i.x, i.y, abs_sub.z ), fd_fire, 15, 10_turns );
+            }
+        }
+
     }
 }
 
@@ -654,7 +835,7 @@ void mx_portal_in( map &m, const tripoint &abs_sub )
         }
     };
     int x = rng( 5, SEEX * 2 - 6 ), y = rng( 5, SEEY * 2 - 6 );
-    m.add_field( {x, y, abs_sub.z}, fd_fatigue, 3, 0 );
+    m.add_field( {x, y, abs_sub.z}, fd_fatigue, 3, 0_turns );
     fungal_effects fe( *g, m );
     for( int i = x - 5; i <= x + 5; i++ ) {
         for( int j = y - 5; j <= y + 5; j++ ) {
@@ -702,7 +883,7 @@ void mx_spider( map &m, const tripoint &abs_sub )
             bool should_web_tree = m.has_flag_ter( "TREE", location ) && !one_in( 4 );
 
             if( should_web_flat || should_web_shrub || should_web_tree ) {
-                m.add_field( location, fd_web, rng( 1, 3 ), 0 );
+                m.add_field( location, fd_web, rng( 1, 3 ), 0_turns );
             }
         }
     }
@@ -813,72 +994,14 @@ void mx_clearcut( map &m, const tripoint &abs_sub )
 
 void mx_pond( map &m, const tripoint &abs_sub )
 {
-    // This map extra creates small ponds using a simple cellular automata.
+    // This map extra creates small ponds using a simple cellular automaton.
 
-    // Basic rules are as follows:
-    // - 55% of cells start alive
-    // - 5 iterations
-    // - Dead cells with > 4 neighbors become alive
-    // - Alive cells with > 3 neighbors stay alive
-    // - The rest die
     constexpr int width = SEEX * 2;
     constexpr int height = SEEY * 2;
-    std::vector<std::vector<int>> current( width, std::vector<int>( height, 0 ) );
-    std::vector<std::vector<int>> next( width, std::vector<int>( height, 0 ) );
 
-    const auto neighbor_count = []( const std::vector<std::vector<int>> &cells, const int x,
-    const int y ) {
-        // Calculate the number of alive neighbors by looking at the Moore neighborhood (9 adjacent cells).
-        int neighbors = 0;
-        for( int ni = -1; ni <= 1; ni++ ) {
-            for( int nj = -1; nj <= 1; nj++ ) {
-                neighbors += cells[x + ni][y + nj];
-            }
-        }
-        // Because we included ourself in the loop above, subtract ourselves back out.
-        neighbors -= cells[x][y];
-
-        return neighbors;
-    };
-
-    // Initialize our initial set of cells.
-    for( int i = 0; i < width; i++ ) {
-        for( int j = 0; j < height; j++ ) {
-            current[i][j] = x_in_y( 55, 100 );
-        }
-    }
-
-    for( int iteration = 0; iteration < 5; iteration++ ) {
-        for( int i = 0; i < width; i++ ) {
-            for( int j = 0; j < height; j++ ) {
-                // Skip the edges--no need to complicate this with more complex neighbor
-                // calculations, just keep them constant.
-                if( i == 0 || i == width - 1 || j == 0 || j == height - 1 ) {
-                    next[i][j] = 0;
-                    continue;
-                }
-
-                // Count our neighors.
-                const int neighbors = neighbor_count( current, i, j );
-
-                // Dead and > 4 neighbors, so become alive.
-                if( ( current[i][j] == 0 ) && ( neighbors > 4 ) ) {
-                    next[i][j] = 1;
-                }
-                // Alive and > 3 neighbors, so stay alive.
-                else if( ( current[i][j] == 1 ) && ( neighbors > 3 ) ) {
-                    next[i][j] = 1;
-                }
-                // Else, die.
-                else {
-                    next[i][j] = 0;
-                }
-            }
-        }
-
-        // Swap our current and next vectors and repeat.
-        std::swap( current, next );
-    }
+    // Generate the cells for our lake.
+    std::vector<std::vector<int>> current = CellularAutomata::generate_cellular_automaton( width,
+                                            height, 55, 5, 4, 3 );
 
     // Loop through and turn every live cell into water.
     // Do a roll for our three possible lake types:
@@ -900,7 +1023,7 @@ void mx_pond( map &m, const tripoint &abs_sub )
                         m.ter_set( location, t_water_dp );
                         break;
                     case 3:
-                        const int neighbors = neighbor_count( current, i, j );
+                        const int neighbors = CellularAutomata::neighbor_count( current, width, height, i, j );
                         if( neighbors == 8 ) {
                             m.ter_set( location, t_water_dp );
                         } else {
@@ -913,6 +1036,49 @@ void mx_pond( map &m, const tripoint &abs_sub )
     }
 
     m.place_spawns( GROUP_FISH, 1, 0, 0, width, height, 0.15f );
+}
+
+void mx_clay_deposit( map &m, const tripoint &abs_sub )
+{
+    // This map extra creates small clay deposits using a simple cellular automaton.
+
+    constexpr int width = SEEX * 2;
+    constexpr int height = SEEY * 2;
+
+    for( int tries = 0; tries < 5; tries++ ) {
+        // Generate the cells for our clay deposit.
+        std::vector<std::vector<int>> current = CellularAutomata::generate_cellular_automaton( width,
+                                                height, 35, 5, 4, 3 );
+
+        // With our settings for the CA, it's sometimes possible to get a bad generation with not enough
+        // alive cells (or even 0).
+        int alive_count = 0;
+        for( int i = 0; i < width; i++ ) {
+            for( int j = 0; j < height; j++ ) {
+                alive_count += current[i][j];
+            }
+        }
+
+        // If we have fewer than 4 alive cells, lets try again.
+        if( alive_count < 4 ) {
+            continue;
+        }
+
+        // Loop through and turn every live cell into clay.
+        for( int i = 0; i < width; i++ ) {
+            for( int j = 0; j < height; j++ ) {
+                if( current[i][j] == 1 ) {
+                    const tripoint location( i, j, abs_sub.z );
+                    m.furn_set( location, f_null );
+                    m.ter_set( location, t_clay );
+                }
+            }
+        }
+
+        // If we got here, it meant we had a successful try and can just break out of
+        // our retry loop.
+        break;
+    }
 }
 
 typedef std::unordered_map<std::string, map_special_pointer> FunctionMap;
@@ -938,13 +1104,15 @@ FunctionMap builtin_functions = {
     { "mx_shrubbery", mx_shrubbery },
     { "mx_clearcut", mx_clearcut },
     { "mx_pond", mx_pond },
+    { "mx_clay_deposit", mx_clay_deposit },
+    { "mx_bandits_block", mx_bandits_block },
 };
 
 map_special_pointer get_function( const std::string &name )
 {
     const auto iter = builtin_functions.find( name );
     if( iter == builtin_functions.end() ) {
-        debugmsg( "no map special with name %s", name.c_str() );
+        debugmsg( "no map special with name %s", name );
         return nullptr;
     }
     return iter->second;

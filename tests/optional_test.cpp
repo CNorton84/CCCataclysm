@@ -1,5 +1,7 @@
-#include "catch/catch.hpp"
+#include <type_traits>
+#include <utility>
 
+#include "catch/catch.hpp"
 #include "optional.h"
 
 TEST_CASE( "optional_assignment_works", "[optional]" )

@@ -10,6 +10,7 @@
 /WinDepend/
 /bindist/
 /build/
+/build-start-time
 /cmake-build-debug/
 /config/
 /data/*.template
@@ -24,7 +25,6 @@
 /obj/
 /objwin/
 /save/
-/src/lua/catabindings.cpp
 /src/version.h
 /sound/
 /templates/
@@ -47,6 +47,7 @@ logg.txt
 *.ilk
 *.opensdf
 *.pdb
+*.lib
 *.sdf
 *.suo
 *.user
@@ -67,6 +68,9 @@ Cataclysm.exe.lastcodeanalysissucceeded
 
 #Visual Studio 2017
 /msvc-full-features/PredictedInputCache_Debug_x64.dat
+
+# PVS Studio
+/msvc-full-features/*PVS-Studio*
 
 # Temporary and backup files
 *.bak

@@ -1,5 +1,17 @@
 #include "input.h"
 
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <array>
+#include <exception>
+#include <locale>
+#include <memory>
+#include <set>
+#include <utility>
+
 #include "action.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -17,17 +29,11 @@
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
-
-#include <algorithm>
-#include <cctype>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
+#include "color.h"
+#include "enums.h"
 
 using std::min; // from <algorithm>
 using std::max;
-
-extern bool tile_iso;
 
 static const std::string default_context_id( "default" );
 
@@ -64,7 +70,7 @@ static std::string long_to_str( long number )
 
 bool is_mouse_enabled()
 {
-#if ((defined _WIN32 || defined WINDOWS) && !(defined TILES))
+#if defined(_WIN32) && !defined(TILES)
     return false;
 #else
     return true;
@@ -449,9 +455,9 @@ const action_attributes &input_manager::get_action_attributes(
 
     if( context != default_context_id ) {
         // Check if the action exists in the provided context
-        t_action_contexts::const_iterator action_context = action_contexts.find( context );
+        const t_action_contexts::const_iterator action_context = action_contexts.find( context );
         if( action_context != action_contexts.end() ) {
-            t_actions::const_iterator action = action_context->second.find( action_id );
+            const t_actions::const_iterator action = action_context->second.find( action_id );
             if( action != action_context->second.end() ) {
                 if( overwrites_default ) {
                     *overwrites_default = true;
@@ -605,7 +611,7 @@ const std::string &input_context::input_to_action( const input_event &inp ) cons
     return CATA_ERROR;
 }
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 std::list<input_context *> input_context::input_context_stack;
 
 void input_context::register_manual_key( manual_key mk )
@@ -650,7 +656,8 @@ void input_context::register_action( const std::string &action_descriptor, const
     }
 }
 
-std::vector<char> input_context::keys_bound_to( const std::string &action_descriptor ) const
+std::vector<char> input_context::keys_bound_to( const std::string &action_descriptor,
+        const bool restrict_to_printable ) const
 {
     std::vector<char> result;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
@@ -658,9 +665,11 @@ std::vector<char> input_context::keys_bound_to( const std::string &action_descri
     for( const auto &events_event : events ) {
         // Ignore multi-key input and non-keyboard input
         // TODO: fix for Unicode.
-        if( events_event.type == CATA_INPUT_KEYBOARD && events_event.sequence.size() == 1 &&
-            events_event.sequence.front() < 0xFF && isprint( events_event.sequence.front() ) ) {
-            result.push_back( static_cast<char>( events_event.sequence.front() ) );
+        if( events_event.type == CATA_INPUT_KEYBOARD && events_event.sequence.size() == 1 ) {
+            if( !restrict_to_printable || ( events_event.sequence.front() < 0xFF &&
+                                            isprint( events_event.sequence.front() ) ) ) {
+                result.push_back( static_cast<char>( events_event.sequence.front() ) );
+            }
         }
     }
     return result;
@@ -1037,8 +1046,8 @@ void input_context::display_menu()
             } else {
                 col = global_key;
             }
-            mvwprintz( w_help, i + 10, 4, col, "%s: ", get_action_name( action_id ).c_str() );
-            mvwprintz( w_help, i + 10, 52, col, "%s", get_desc( action_id ).c_str() );
+            mvwprintz( w_help, i + 10, 4, col, "%s: ", get_action_name( action_id ) );
+            mvwprintz( w_help, i + 10, 52, col, "%s", get_desc( action_id ) );
         }
 
         // spopup.query_string() will call wrefresh( w_help )
@@ -1089,7 +1098,7 @@ void input_context::display_menu()
             const std::string name = get_action_name( action_id );
 
             if( status == s_remove && ( !get_option<bool>( "QUERY_KEYBIND_REMOVAL" ) ||
-                                        query_yn( _( "Clear keys for %s?" ), name.c_str() ) ) ) {
+                                        query_yn( _( "Clear keys for %s?" ), name ) ) ) {
 
                 // If it's global, reset the global actions.
                 std::string category_to_access = category;
@@ -1110,7 +1119,7 @@ void input_context::display_menu()
                                               .evt;
 
                 if( action_uses_input( action_id, new_event ) ) {
-                    popup_getkey( _( "This key is already used for %s." ), name.c_str() );
+                    popup_getkey( _( "This key is already used for %s." ), name );
                     status = s_show;
                     continue;
                 }
@@ -1203,7 +1212,7 @@ long input_manager::get_previously_pressed_key() const
 
 void input_manager::wait_for_any_key()
 {
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
     input_context ctxt( "WAIT_FOR_ANY_KEY" );
 #endif
     while( true ) {
@@ -1219,7 +1228,7 @@ void input_manager::wait_for_any_key()
     }
 }
 
-#if !(defined TILES || defined _WIN32 || defined WINDOWS)
+#if !(defined(TILES) || defined(_WIN32))
 // Also specify that we don't have a gamepad plugged in.
 bool gamepad_available()
 {
@@ -1261,7 +1270,7 @@ const std::string input_context::get_action_name( const std::string &action_id )
     // 2) Check if the hotkey has a name
     const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, category );
     if( !attributes.name.empty() ) {
-        return _( attributes.name.c_str() );
+        return _( attributes.name );
     }
 
     // 3) If the hotkey has no name, the user has created a local hotkey in
@@ -1270,7 +1279,7 @@ const std::string input_context::get_action_name( const std::string &action_id )
     const action_attributes &default_attributes = inp_mngr.get_action_attributes( action_id,
             default_context_id );
     if( !default_attributes.name.empty() ) {
-        return _( default_attributes.name.c_str() );
+        return _( default_attributes.name );
     }
 
     // 4) Unable to find suitable name. Keybindings configuration likely borked

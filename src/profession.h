@@ -2,30 +2,26 @@
 #ifndef PROFESSION_H
 #define PROFESSION_H
 
-#include "string_id.h"
-
 #include <list>
 #include <set>
 #include <vector>
+#include <string>
+#include <utility>
+
+#include "string_id.h"
+#include "pldata.h"
+#include "type_id.h"
 
 template<typename T>
 class generic_factory;
-class profession;
+
 using Group_tag = std::string;
 class item;
+
 using itype_id = std::string;
 class player;
-class JsonArray;
 class JsonObject;
-class addiction;
-struct mutation_branch;
-using trait_id = string_id<mutation_branch>;
-struct bionic_data;
-using bionic_id = string_id<bionic_data>;
 enum add_type : int;
-
-class Skill;
-using skill_id = string_id<Skill>;
 
 class profession
 {
@@ -79,7 +75,7 @@ class profession
         //these three aren't meant for external use, but had to be made public regardless
         profession();
 
-        static void load_profession( JsonObject &obj, const std::string &src );
+        static void load_profession( JsonObject &jo, const std::string &src );
         static void load_item_substitutions( JsonObject &jo );
 
         // these should be the only ways used to get at professions

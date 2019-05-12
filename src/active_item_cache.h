@@ -2,12 +2,11 @@
 #ifndef ACTIVE_ITEM_CACHE_H
 #define ACTIVE_ITEM_CACHE_H
 
-#include "enums.h"
-
 #include <list>
 #include <unordered_map>
 
-class item;
+#include "enums.h"
+#include "item.h"
 
 // A struct used to uniquely identify an item within a submap or vehicle.
 struct item_reference {
@@ -32,10 +31,12 @@ class active_item_cache
         // Use this one if there's a chance that the item being referenced has been invalidated.
         bool has( const item_reference &itm ) const;
         bool empty() const;
+
         std::list<item_reference> get();
 
         /** Subtract delta from every item_reference's location */
         void subtract_locations( const point &delta );
+        void rotate_locations( int turns, const point &dim );
 };
 
 #endif

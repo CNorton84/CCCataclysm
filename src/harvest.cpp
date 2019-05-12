@@ -1,17 +1,19 @@
 #include "harvest.h"
 
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+#include <string>
+#include <iterator>
+
 #include "assign.h"
 #include "debug.h"
 #include "item.h"
 #include "item_group.h"
 #include "output.h"
+#include "json.h"
 
-#include <algorithm>
-#include <cmath>
-#include <sstream>
-#include <string>
-
-// @todo: Make a generic factory
+// TODO: Make a generic factory
 static std::map<harvest_id, harvest_list> harvest_all;
 
 /** @relates string_id */
@@ -67,13 +69,13 @@ harvest_entry harvest_entry::load( JsonObject &jo, const std::string &src )
 }
 
 const harvest_id &harvest_list::load( JsonObject &jo, const std::string &src,
-                                      const std::string &id )
+                                      const std::string &force_id )
 {
     harvest_list ret;
     if( jo.has_string( "id" ) ) {
         ret.id_ = harvest_id( jo.get_string( "id" ) );
-    } else if( !id.empty() ) {
-        ret.id_ = harvest_id( id );
+    } else if( !force_id.empty() ) {
+        ret.id_ = harvest_id( force_id );
     } else {
         jo.throw_error( "id was not specified for harvest" );
     }
@@ -151,7 +153,7 @@ void harvest_list::check_consistency()
         const std::string errors = enumerate_as_string( hl.entries_.begin(), hl.entries_.end(),
                                    error_func );
         if( !errors.empty() ) {
-            debugmsg( "Harvest list %s has invalid entry: %s", hl_id, errors.c_str() );
+            debugmsg( "Harvest list %s has invalid entry: %s", hl_id, errors );
         }
 
     }
@@ -193,7 +195,7 @@ std::string harvest_list::describe( int at_skill ) const
         } else {
             max_f = en.max;
         }
-        // @todo: Avoid repetition here by making a common harvest drop function
+        // TODO: Avoid repetition here by making a common harvest drop function
         int max_drops = std::min<int>( en.max, std::round( std::max( 0.0f, max_f ) ) );
         int min_drops = std::max<int>( 0.0f, std::round( std::min( min_f, max_f ) ) );
         if( max_drops <= 0 ) {

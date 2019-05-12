@@ -1,5 +1,11 @@
 #include "profession.h"
 
+#include <cmath>
+#include <iterator>
+#include <map>
+#include <algorithm>
+#include <memory>
+
 #include "addiction.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -10,10 +16,8 @@
 #include "pldata.h"
 #include "text_snippets.h"
 #include "translations.h"
-
-#include <cmath>
-#include <iterator>
-#include <map>
+#include "calendar.h"
+#include "item.h"
 
 namespace
 {
@@ -121,7 +125,7 @@ class item_reader : public generic_typed_reader<item_reader>
             JsonArray jarr = jin.get_array();
             const auto id = jarr.get_string( 0 );
             const auto s = jarr.get_string( 1 );
-            const auto snippet = _( s.c_str() );
+            const auto snippet = _( s );
             return profession::itypedec( id, snippet );
         }
         template<typename C>

@@ -1,5 +1,15 @@
 #include "game_inventory.h"
 
+#include <limits.h>
+#include <stddef.h>
+#include <functional>
+#include <bitset>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "game.h"
 #include "inventory_ui.h"
 #include "item.h"
@@ -12,8 +22,27 @@
 #include "recipe_dictionary.h"
 #include "skill.h"
 #include "string_formatter.h"
+#include "calendar.h"
+#include "cata_utility.h"
+#include "color.h"
+#include "compatibility.h"
+#include "damage.h"
+#include "debug.h"
+#include "enums.h"
+#include "input.h"
+#include "inventory.h"
+#include "item_location.h"
+#include "iuse.h"
+#include "optional.h"
+#include "player_activity.h"
+#include "recipe.h"
+#include "requirements.h"
+#include "ret_val.h"
+#include "translations.h"
+#include "units.h"
+#include "type_id.h"
 
-#include <functional>
+class Character;
 
 typedef std::function<bool( const item & )> item_filter;
 typedef std::function<bool( const item_location & )> item_location_filter;
@@ -64,52 +93,103 @@ static item_location inv_internal( player &u, const inventory_selector_preset &p
                                    const std::string &none_message,
                                    const std::string &hint = std::string() )
 {
-    u.inv.restack( u );
-
     inventory_pick_selector inv_s( u, preset );
 
     inv_s.set_title( title );
     inv_s.set_hint( hint );
     inv_s.set_display_stats( false );
 
-    inv_s.add_character_items( u );
-    inv_s.add_nearby_items( radius );
+    std::pair<size_t, size_t> init_pair;
+    bool init_selection = false;
 
-    if( inv_s.empty() ) {
-        const std::string msg = none_message.empty()
-                                ? _( "You don't have the necessary item at hand." )
-                                : none_message;
-        popup( msg, PF_GET_KEY );
-        return item_location();
+    const std::vector<activity_id> consuming {
+        activity_id( "ACT_EAT_MENU" ),
+        activity_id( "ACT_CONSUME_FOOD_MENU" ),
+        activity_id( "ACT_CONSUME_DRINK_MENU" ),
+        activity_id( "ACT_CONSUME_MEDS_MENU" ) };
+
+    if( u.has_activity( consuming ) && u.activity.values.size() >= 2 ) {
+        init_pair.first = u.activity.values[0];
+        init_pair.second = u.activity.values[1];
+        init_selection = true;
     }
 
-    return inv_s.execute();
+    do {
+        u.inv.restack( u );
+
+        inv_s.clear_items();
+        inv_s.add_character_items( u );
+        inv_s.add_nearby_items( radius );
+
+        if( init_selection ) {
+            inv_s.update();
+            inv_s.select_position( init_pair );
+            init_selection = false;
+        }
+
+        if( inv_s.empty() ) {
+            const std::string msg = none_message.empty()
+                                    ? _( "You don't have the necessary item at hand." )
+                                    : none_message;
+            popup( msg, PF_GET_KEY );
+            return item_location();
+        }
+
+        item_location location = inv_s.execute();
+
+        if( inv_s.keep_open ) {
+            inv_s.keep_open = false;
+            continue;
+        }
+
+        if( u.has_activity( consuming ) ) {
+            u.activity.values.clear();
+            init_pair = inv_s.get_selection_position();
+            u.activity.values.push_back( init_pair.first );
+            u.activity.values.push_back( init_pair.second );
+        }
+
+        return location;
+
+    } while( true );
 }
 
 void game_menus::inv::common( player &p )
 {
-    static const std::set<int> allowed_selections = { { '\0', '=' } };
-
-    p.inv.restack( p );
+    // Return to inventory menu on those inputs
+    static const std::set<int> loop_options = { { '\0', '=', 'f' } };
 
     inventory_pick_selector inv_s( p );
 
-    inv_s.add_character_items( p );
     inv_s.set_title( _( "Inventory" ) );
+    inv_s.set_hint( string_format(
+                        _( "Item hotkeys assigned: <color_light_gray>%d</color>/<color_light_gray>%d</color>" ),
+                        p.allocated_invlets().size(), inv_chars.size() ) );
 
-    int res;
+    int res = 0;
+
     do {
-        inv_s.set_hint( string_format(
-                            _( "Item hotkeys assigned: <color_light_gray>%d</color>/<color_light_gray>%d</color>" ),
-                            p.allocated_invlets().size(), inv_chars.size() - p.allocated_invlets().size() ) );
+        p.inv.restack( p );
+        inv_s.clear_items();
+        inv_s.add_character_items( p );
+        inv_s.update();
+
         const item_location &location = inv_s.execute();
+
         if( location == item_location::nowhere ) {
-            break;
+            if( inv_s.keep_open ) {
+                inv_s.keep_open = false;
+                continue;
+            } else {
+                break;
+            }
         }
+
         g->refresh_all();
         res = g->inventory_item_menu( p.get_item_position( location.get_item() ) );
         g->refresh_all();
-    } while( allowed_selections.count( res ) != 0 );
+
+    } while( loop_options.count( res ) != 0 );
 }
 
 int game::inv_for_filter( const std::string &title, item_filter filter,
@@ -136,7 +216,7 @@ int game::inv_for_id( const itype_id &id, const std::string &title )
 {
     return inv_for_filter( title, [ &id ]( const item & it ) {
         return it.typeId() == id;
-    }, string_format( _( "You don't have a %s." ), item::nname( id ).c_str() ) );
+    }, string_format( _( "You don't have a %s." ), item::nname( id ) ) );
 }
 
 class armor_inventory_preset: public inventory_selector_preset
@@ -149,7 +229,7 @@ class armor_inventory_preset: public inventory_selector_preset
             }, _( "ENCUMBRANCE" ) );
 
             append_cell( [ this ]( const item_location & loc ) {
-                return loc->get_storage() > 0 ? string_format( "<%s>%s</color>", color,
+                return loc->get_storage() > 0_ml ? string_format( "<%s>%s</color>", color,
                         format_volume( loc->get_storage() ) ) : std::string();
             }, _( "STORAGE" ) );
 
@@ -272,9 +352,9 @@ item_location game_menus::inv::container_for( player &p, const item &liquid, int
     };
 
     return inv_internal( p, inventory_filter_preset( filter ),
-                         string_format( _( "Container for %s" ), liquid.display_name( liquid.charges ).c_str() ), radius,
+                         string_format( _( "Container for %s" ), liquid.display_name( liquid.charges ) ), radius,
                          string_format( _( "You don't have a suitable container for carrying %s." ),
-                                        liquid.tname().c_str() ) );
+                                        liquid.tname() ) );
 }
 
 class pickup_inventory_preset : public inventory_selector_preset
@@ -306,15 +386,18 @@ class disassemble_inventory_preset : public pickup_inventory_preset
         disassemble_inventory_preset( const player &p, const inventory &inv ) :
             pickup_inventory_preset( p ), p( p ), inv( inv ) {
 
+            check_components = true;
+
             append_cell( [ this ]( const item_location & loc ) {
                 const auto &req = get_recipe( loc ).disassembly_requirements();
                 if( req.is_empty() ) {
                     return std::string();
                 }
-                const auto components = req.get_components();
+                const item *i = loc.get_item();
+                const auto components = i->get_uncraft_components();
                 return enumerate_as_string( components.begin(), components.end(),
                 []( const decltype( components )::value_type & comps ) {
-                    return comps.front().to_string();
+                    return comps.to_string();
                 } );
             }, _( "YIELD" ) );
 
@@ -358,8 +441,7 @@ class comestible_inventory_preset : public inventory_selector_preset
         comestible_inventory_preset( const player &p ) : inventory_selector_preset(), p( p ) {
 
             append_cell( [ &p, this ]( const item_location & loc ) {
-                return good_bad_none( p.nutrition_for( get_comestible_item( loc ) ) *
-                                      islot_comestible::kcal_per_nutr );
+                return good_bad_none( p.kcal_for( get_comestible_item( loc ) ) );
             }, _( "CALORIES" ) );
 
             append_cell( [ this ]( const item_location & loc ) {
@@ -377,7 +459,7 @@ class comestible_inventory_preset : public inventory_selector_preset
 
             append_cell( [ this ]( const item_location & loc ) {
                 const time_duration spoils = get_edible_comestible( loc ).spoils;
-                if( spoils > 0 ) {
+                if( spoils > 0_turns ) {
                     return to_string_clipped( spoils );
                 }
                 //~ Used for permafood shelf life in the Eat menu
@@ -387,7 +469,7 @@ class comestible_inventory_preset : public inventory_selector_preset
             append_cell( [this]( const item_location & loc ) {
                 if( g->u.can_estimate_rot() ) {
                     const islot_comestible item = get_edible_comestible( loc );
-                    if( item.spoils > 0 ) {
+                    if( item.spoils > 0_turns ) {
                         return get_freshness( loc );
                     }
                     return std::string( "---" );
@@ -398,7 +480,7 @@ class comestible_inventory_preset : public inventory_selector_preset
             append_cell( [ this ]( const item_location & loc ) {
                 if( g->u.can_estimate_rot() ) {
                     const islot_comestible item = get_edible_comestible( loc );
-                    if( item.spoils > 0 ) {
+                    if( item.spoils > 0_turns ) {
                         if( !get_comestible_item( loc ).rotten() ) {
                             return get_time_left_rounded( loc );
                         }
@@ -426,7 +508,7 @@ class comestible_inventory_preset : public inventory_selector_preset
                 }
 
                 if( !cbm_name.empty() ) {
-                    return string_format( "<color_cyan>%s</color>", cbm_name.c_str() );
+                    return string_format( "<color_cyan>%s</color>", cbm_name );
                 }
 
                 return std::string();
@@ -498,6 +580,7 @@ class comestible_inventory_preset : public inventory_selector_preset
 
         const islot_comestible &get_edible_comestible( const item &it ) const {
             if( it.is_comestible() && p.can_eat( it ).success() ) {
+                // Ok since can_eat() returns false if is_craft() is true
                 return *it.type->comestible;
             }
             static const islot_comestible dummy {};
@@ -549,9 +632,67 @@ class comestible_inventory_preset : public inventory_selector_preset
 
 item_location game_menus::inv::consume( player &p )
 {
+    if( !g->u.has_activity( activity_id( "ACT_EAT_MENU" ) ) ) {
+        g->u.assign_activity( activity_id( "ACT_EAT_MENU" ) );
+    }
+
     return inv_internal( p, comestible_inventory_preset( p ),
                          _( "Consume item" ), 1,
                          _( "You have nothing to consume." ) );
+}
+
+class comestible_filtered_inventory_preset : public comestible_inventory_preset
+{
+    public:
+        comestible_filtered_inventory_preset( const player &p, bool( *predicate )( const item &it ) ) :
+            comestible_inventory_preset( p ), predicate( predicate ) {}
+
+        bool is_shown( const item_location &loc ) const override {
+            return comestible_inventory_preset::is_shown( loc ) &&
+                   predicate( get_comestible_item( loc ) );
+        }
+
+    private:
+        bool( *predicate )( const item &it );
+};
+
+item_location game_menus::inv::consume_food( player &p )
+{
+    if( !g->u.has_activity( activity_id( "ACT_CONSUME_FOOD_MENU" ) ) ) {
+        g->u.assign_activity( activity_id( "ACT_CONSUME_FOOD_MENU" ) );
+    }
+
+    return inv_internal( p, comestible_filtered_inventory_preset( p, []( const item & it ) {
+        return it.get_comestible()->comesttype == "FOOD" || it.has_flag( "USE_EAT_VERB" );
+    } ),
+    _( "Consume food" ), 1,
+    _( "You have no food to consume." ) );
+}
+
+item_location game_menus::inv::consume_drink( player &p )
+{
+    if( !g->u.has_activity( activity_id( "ACT_CONSUME_DRINK_MENU" ) ) ) {
+        g->u.assign_activity( activity_id( "ACT_CONSUME_DRINK_MENU" ) );
+    }
+
+    return inv_internal( p, comestible_filtered_inventory_preset( p, []( const item & it ) {
+        return it.get_comestible()->comesttype == "DRINK" && !it.has_flag( "USE_EAT_VERB" );
+    } ),
+    _( "Consume drink" ), 1,
+    _( "You have no drink to consume." ) );
+}
+
+item_location game_menus::inv::consume_meds( player &p )
+{
+    if( !g->u.has_activity( activity_id( "ACT_CONSUME_MEDS_MENU" ) ) ) {
+        g->u.assign_activity( activity_id( "ACT_CONSUME_MEDS_MENU" ) );
+    }
+
+    return inv_internal( p, comestible_filtered_inventory_preset( p, []( const item & it ) {
+        return it.get_comestible()->comesttype == "MED";
+    } ),
+    _( "Consume medication" ), 1,
+    _( "You have no medication to consume." ) );
 }
 
 class activatable_inventory_preset : public pickup_inventory_preset
@@ -562,7 +703,7 @@ class activatable_inventory_preset : public pickup_inventory_preset
                 append_cell( [ this ]( const item_location & loc ) {
                     const item &it = !( *loc ).is_container_empty() && ( *loc ).get_contained().is_medication() &&
                                      ( *loc ).get_contained().type->has_use() ? ( *loc ).get_contained() : *loc;
-                    return string_format( "<color_light_green>%s</color>", get_action_name( it ).c_str() );
+                    return string_format( "<color_light_green>%s</color>", get_action_name( it ) );
                 }, _( "ACTION" ) );
             }
         }
@@ -657,7 +798,7 @@ class gunmod_inventory_preset : public inventory_selector_preset
 
             if( !p.meets_requirements( gunmod, *loc ) ) {
                 return string_format( _( "requires at least %s" ),
-                                      p.enumerate_unmet_requirements( gunmod, *loc ).c_str() );
+                                      p.enumerate_unmet_requirements( gunmod, *loc ) );
             }
 
             if( get_odds( loc ).first <= 0 ) {
@@ -711,11 +852,14 @@ class read_inventory_preset: public pickup_inventory_preset
                     return unknown;
                 }
                 const auto &book = get_book( loc );
-                if( book.skill && p.get_skill_level_object( book.skill ).can_train() ) {
-                    return string_format( _( "%s to %d" ), book.skill->name().c_str(), book.level );
+                if( book.skill ) {
+                    const SkillLevel &skill = p.get_skill_level_object( book.skill );
+                    if( skill.can_train() ) {
+                        return string_format( _( "%s to %d (%d)" ), book.skill->name(), book.level, skill.level() );
+                    }
                 }
                 return std::string();
-            }, _( "TRAINS" ), unknown );
+            }, _( "TRAINS (CURRENT)" ), unknown );
 
             append_cell( [ this ]( const item_location & loc ) -> std::string {
                 if( !is_known( loc ) ) {
@@ -731,7 +875,7 @@ class read_inventory_preset: public pickup_inventory_preset
                 if( !is_known( loc ) ) {
                     return unknown;
                 }
-                return good_bad_none( p.book_fun_for( *loc ) );
+                return good_bad_none( p.book_fun_for( *loc, p ) );
             }, _( "FUN" ), unknown );
 
             append_cell( [ this, &p ]( const item_location & loc ) -> std::string {
@@ -750,7 +894,7 @@ class read_inventory_preset: public pickup_inventory_preset
                 const std::string duration = to_string_approx( time_duration::from_turns( actual_turns ), false );
 
                 if( actual_turns > normal_turns ) { // Longer - complicated stuff.
-                    return string_format( "<color_light_red>%s</color>", duration.c_str() );
+                    return string_format( "<color_light_red>%s</color>", duration );
                 }
 
                 return duration; // Normal speed.
@@ -837,8 +981,8 @@ class steal_inventory_preset : public pickup_inventory_preset
 item_location game_menus::inv::steal( player &p, player &victim )
 {
     return inv_internal( victim, steal_inventory_preset( p, victim ),
-                         string_format( _( "Steal from %s" ), victim.name.c_str() ), -1,
-                         string_format( _( "%s's inventory is empty." ), victim.name.c_str() ) );
+                         string_format( _( "Steal from %s" ), victim.name ), -1,
+                         string_format( _( "%s's inventory is empty." ), victim.name ) );
 }
 
 class weapon_inventory_preset: public inventory_selector_preset
@@ -858,17 +1002,17 @@ class weapon_inventory_preset: public inventory_selector_preset
                         const int ammo_mult = *loc->ammo_data()->ammo->prop_damage;
 
                         return string_format( "%s<color_light_gray>*</color>%s <color_light_gray>=</color> %s",
-                                              get_damage_string( basic_damage, true ).c_str(),
-                                              get_damage_string( ammo_mult, true ).c_str(),
-                                              get_damage_string( total_damage, true ).c_str()
+                                              get_damage_string( basic_damage, true ),
+                                              get_damage_string( ammo_mult, true ),
+                                              get_damage_string( total_damage, true )
                                             );
                     } else {
                         const int ammo_damage = loc->ammo_data()->ammo->damage.total_damage();
 
                         return string_format( "%s<color_light_gray>+</color>%s <color_light_gray>=</color> %s",
-                                              get_damage_string( basic_damage, true ).c_str(),
-                                              get_damage_string( ammo_damage, true ).c_str(),
-                                              get_damage_string( total_damage, true ).c_str()
+                                              get_damage_string( basic_damage, true ),
+                                              get_damage_string( ammo_damage, true ),
+                                              get_damage_string( total_damage, true )
                                             );
                     }
                 } else {
@@ -955,20 +1099,20 @@ item_location game_menus::inv::holster( player &p, item &holster )
 
     if( !actor ) {
         const std::string msg = string_format( _( "You can't put anything into your %s." ),
-                                               holster_name.c_str() );
+                                               holster_name );
         popup( msg, PF_GET_KEY );
         return item_location();
     }
 
     const std::string title = actor->holster_prompt.empty()
                               ? _( "Holster item" )
-                              : _( actor->holster_prompt.c_str() );
+                              : _( actor->holster_prompt );
     const std::string hint = string_format( _( "Choose a weapon to put into your %s" ),
-                                            holster_name.c_str() );
+                                            holster_name );
 
     return inv_internal( p, holster_inventory_preset( p, *actor ), title, 1,
                          string_format( _( "You have no weapons you could put into your %s." ),
-                                        holster_name.c_str() ),
+                                        holster_name ),
                          hint );
 }
 
@@ -1026,6 +1170,32 @@ item_location game_menus::inv::salvage( player &p, const salvage_actor *actor )
                          _( "You have nothing to cut up." ) );
 }
 
+class repair_inventory_preset: public inventory_selector_preset
+{
+    public:
+        repair_inventory_preset( const repair_item_actor *actor, const item *main_tool ) :
+            inventory_selector_preset(), actor( actor ), main_tool( main_tool ) {
+        }
+
+        bool is_shown( const item_location &loc ) const override {
+            return loc->made_of_any( actor->materials ) && !loc->count_by_charges() && !loc->is_firearm() &&
+                   &*loc != main_tool;
+        }
+
+    private:
+        const repair_item_actor *actor;
+        const item *main_tool;
+};
+
+item_location game_menus::inv::repair( player &p, const repair_item_actor *actor,
+                                       const item *main_tool )
+{
+    return inv_internal( p, repair_inventory_preset( actor, main_tool ),
+                         _( "Repair what?" ), 1,
+                         string_format( _( "You have no items that could be repaired with a %s." ),
+                                        main_tool->type_name( 1 ) ) );
+}
+
 item_location game_menus::inv::saw_barrel( player &p, item &tool )
 {
     const auto actor = dynamic_cast<const saw_barrel_actor *>
@@ -1040,7 +1210,7 @@ item_location game_menus::inv::saw_barrel( player &p, item &tool )
                          _( "Saw barrel" ), 1,
                          _( "You don't have any guns." ),
                          string_format( _( "Choose a weapon to use your %s on" ),
-                                        tool.tname( 1, false ).c_str()
+                                        tool.tname( 1, false )
                                       )
                        );
 }

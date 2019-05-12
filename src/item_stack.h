@@ -5,14 +5,8 @@
 #include <cstddef>
 #include <list>
 
-class item;
-namespace units
-{
-template<typename V, typename U>
-class quantity;
-class volume_in_milliliter_tag;
-using volume = quantity<int, volume_in_milliliter_tag>;
-} // namespace units
+#include "units.h"
+#include "item.h"
 
 // A wrapper class to bundle up the references needed for a caller to safely manipulate
 // items and obtain information about items at a particular map x/y location.

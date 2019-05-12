@@ -1,4 +1,26 @@
-#ifdef SDL_SOUND
+#if defined(SDL_SOUND)
+
+#include "sdlsound.h"
+
+#include <stdlib.h>
+#include <algorithm>
+#include <chrono>
+#include <map>
+#include <random>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <exception>
+#include <memory>
+#include <ostream>
+#include <type_traits>
+#include <utility>
+
+#if defined(_MSC_VER) && defined(USE_VCPKG)
+#    include <SDL2/SDL_mixer.h>
+#else
+#    include <SDL_mixer.h>
+#endif
 
 #include "debug.h"
 #include "init.h"
@@ -7,13 +29,8 @@
 #include "options.h"
 #include "path_info.h"
 #include "rng.h"
-#include "sdlsound.h"
-
-#include <algorithm>
-#include <map>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include "sdl_wrappers.h"
+#include "sounds.h"
 
 #define dbg(x) DebugLog((DebugLevel)(x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -49,7 +66,7 @@ struct music_playlist {
     }
 };
 /** The music we're currently playing. */
-static Mix_Music *current_music = NULL;
+static Mix_Music *current_music = nullptr;
 static std::string current_playlist;
 static size_t current_playlist_at = 0;
 static size_t absolute_playlist_at = 0;
@@ -72,7 +89,7 @@ static inline bool check_sound( const int volume = 1 )
 /**
  * Attempt to initialize an audio device.  Returns false if initialization fails.
  */
-bool init_sound( void )
+bool init_sound()
 {
     int audio_rate = 44100;
     Uint16 audio_format = AUDIO_S16;
@@ -84,7 +101,7 @@ bool init_sound( void )
         // Mix_OpenAudio returns non-zero if something went wrong trying to open the device
         if( !Mix_OpenAudio( audio_rate, audio_format, audio_channels, audio_buffers ) ) {
             Mix_AllocateChannels( 128 );
-            Mix_ReserveChannels( 20 );
+            Mix_ReserveChannels( 24 );
 
             // For the sound effects system.
             Mix_GroupChannels( 2, 9, 1 );
@@ -100,7 +117,7 @@ bool init_sound( void )
 
     return sound_init_success;
 }
-void shutdown_sound( void )
+void shutdown_sound()
 {
     // De-allocate all loaded sound.
     sfx_resources.resource.clear();
@@ -137,7 +154,7 @@ void musicFinished()
 {
     Mix_HaltMusic();
     Mix_FreeMusic( current_music );
-    current_music = NULL;
+    current_music = nullptr;
 
     const auto iter = playlists.find( current_playlist );
     if( iter == playlists.end() ) {
@@ -162,7 +179,7 @@ void musicFinished()
     play_music_file( next.file, next.volume );
 }
 
-void play_music( std::string playlist )
+void play_music( const std::string &playlist )
 {
     const auto iter = playlists.find( playlist );
     if( iter == playlists.end() ) {
@@ -182,7 +199,9 @@ void play_music( std::string playlist )
         playlist_indexes.push_back( i );
     }
     if( list.shuffle ) {
-        std::random_shuffle( playlist_indexes.begin(), playlist_indexes.end() );
+        static auto eng = std::default_random_engine(
+                              std::chrono::system_clock::now().time_since_epoch().count() );
+        std::shuffle( playlist_indexes.begin(), playlist_indexes.end(), eng );
     }
 
     current_playlist = playlist;
@@ -206,7 +225,7 @@ void update_music_volume()
 // Allocate new Mix_Chunk as a null-chunk. Results in a valid, but empty chunk
 // that is created when loading of a sound effect resource fails. Does not own
 // memory. Mix_FreeChunk will free the SDL_malloc'd Mix_Chunk pointer.
-static Mix_Chunk *make_null_chunk( void )
+static Mix_Chunk *make_null_chunk()
 {
     static Mix_Chunk null_chunk = { 0, nullptr, 0, 0 };
     // SDL_malloc to match up with Mix_FreeChunk's SDL_free call
@@ -257,7 +276,6 @@ static inline int add_sfx_path( const std::string &path )
         return result;
     }
 }
-
 
 void sfx::load_sound_effects( JsonObject &jsobj )
 {
@@ -339,6 +357,11 @@ const sound_effect *find_random_effect( const std::string &id, const std::string
     return find_random_effect( id_and_variant( id, "default" ) );
 }
 
+bool sfx::has_variant_sound( const std::string &id, const std::string &variant )
+{
+    return find_random_effect( id, variant ) != nullptr ? true : false;
+}
+
 // Deletes the dynamically created chunk (if such a chunk had been played).
 void cleanup_when_channel_finished( int /* channel */, void *udata )
 {
@@ -355,17 +378,15 @@ void empty_effect( int /* chan */, void * /* stream */, int /* len */, void * /*
 
 Mix_Chunk *do_pitch_shift( Mix_Chunk *s, float pitch )
 {
-    Mix_Chunk *result;
     Uint32 s_in = s->alen / 4;
     Uint32 s_out = static_cast<Uint32>( static_cast<float>( s_in ) * pitch );
     float pitch_real = static_cast<float>( s_out ) / static_cast<float>( s_in );
-    Uint32 i, j;
-    result = static_cast<Mix_Chunk *>( malloc( sizeof( Mix_Chunk ) ) );
+    Mix_Chunk *result = static_cast<Mix_Chunk *>( malloc( sizeof( Mix_Chunk ) ) );
     result->allocated = 1;
     result->alen = s_out * 4;
     result->abuf = static_cast<Uint8 *>( malloc( result->alen * sizeof( Uint8 ) ) );
     result->volume = s->volume;
-    for( i = 0; i < s_out; i++ ) {
+    for( Uint32 i = 0; i < s_out; i++ ) {
         Sint16 lt = 0;
         Sint16 rt = 0;
         Sint16 lt_out = 0;
@@ -380,7 +401,7 @@ Mix_Chunk *do_pitch_shift( Mix_Chunk *s, float pitch )
             end = begin;
         }
 
-        for( j = begin; j <= end; j++ ) {
+        for( Uint32 j = begin; j <= end; j++ ) {
             lt = ( s->abuf[( 4 * j ) + 1] << 8 ) | ( s->abuf[( 4 * j ) + 0] );
             rt = ( s->abuf[( 4 * j ) + 3] << 8 ) | ( s->abuf[( 4 * j ) + 2] );
             lt_avg += lt;
@@ -413,15 +434,14 @@ void sfx::play_variant_sound( const std::string &id, const std::string &variant,
     }
     const sound_effect &selected_sound_effect = *eff;
 
-    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );;
+    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );
     Mix_VolumeChunk( effect_to_play,
                      selected_sound_effect.volume * get_option<int>( "SOUND_EFFECT_VOLUME" ) * volume / ( 100 * 100 ) );
     Mix_PlayChannel( -1, effect_to_play, 0 );
 }
 
 void sfx::play_variant_sound( const std::string &id, const std::string &variant, int volume,
-                              int angle,
-                              float pitch_min, float pitch_max )
+                              int angle, float pitch_min, float pitch_max )
 {
     if( !check_sound( volume ) ) {
         return;
@@ -433,7 +453,7 @@ void sfx::play_variant_sound( const std::string &id, const std::string &variant,
     }
     const sound_effect &selected_sound_effect = *eff;
 
-    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );;
+    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );
     float pitch_random = rng_float( pitch_min, pitch_max );
     Mix_Chunk *shifted_effect = do_pitch_shift( effect_to_play, pitch_random );
     Mix_VolumeChunk( shifted_effect,
@@ -443,9 +463,9 @@ void sfx::play_variant_sound( const std::string &id, const std::string &variant,
     Mix_SetPosition( channel, angle, 1 );
 }
 
-void sfx::play_ambient_variant_sound( const std::string &id, const std::string &variant, int volume,
-                                      int channel,
-                                      int duration )
+void sfx::play_variant_sound_pitch( const std::string &id, const std::string &variant, int volume,
+                                    int angle,
+                                    float pitch )
 {
     if( !check_sound( volume ) ) {
         return;
@@ -457,12 +477,43 @@ void sfx::play_ambient_variant_sound( const std::string &id, const std::string &
     }
     const sound_effect &selected_sound_effect = *eff;
 
-    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );;
-    Mix_VolumeChunk( effect_to_play,
+    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );
+    Mix_Chunk *shifted_effect = do_pitch_shift( effect_to_play, pitch );
+    Mix_VolumeChunk( shifted_effect,
                      selected_sound_effect.volume * get_option<int>( "SOUND_EFFECT_VOLUME" ) * volume / ( 100 * 100 ) );
-    if( Mix_FadeInChannel( channel, effect_to_play, -1, duration ) == -1 ) {
-        dbg( D_ERROR ) << "Failed to play sound effect: " << Mix_GetError();
+    int channel = Mix_PlayChannel( -1, shifted_effect, 0 );
+    Mix_RegisterEffect( channel, empty_effect, cleanup_when_channel_finished, shifted_effect );
+    Mix_SetPosition( channel, angle, 1 );
+}
+
+void sfx::play_ambient_variant_sound( const std::string &id, const std::string &variant, int volume,
+                                      int channel, int duration, float pitch )
+{
+    if( !check_sound( volume ) ) {
+        return;
     }
+
+    const sound_effect *eff = find_random_effect( id, variant );
+    if( eff == nullptr ) {
+        return;
+    }
+    const sound_effect &selected_sound_effect = *eff;
+
+    Mix_Chunk *effect_to_play = get_sfx_resource( selected_sound_effect.resource_id );
+    Mix_Chunk *shifted_effect = do_pitch_shift( effect_to_play, pitch );
+    Mix_VolumeChunk( shifted_effect,
+                     selected_sound_effect.volume * get_option<int>( "AMBIENT_SOUND_VOLUME" ) * volume / ( 100 * 100 ) );
+    if( duration ) {
+        if( Mix_FadeInChannel( channel, shifted_effect, -1, duration ) == -1 ) {
+            dbg( D_ERROR ) << "Failed to play sound effect: " << Mix_GetError();
+        }
+    } else {
+        if( Mix_PlayChannel( channel, shifted_effect, -1 ) == -1 ) {
+            dbg( D_ERROR ) << "Failed to play sound effect: " << Mix_GetError();
+        }
+    }
+
+    Mix_RegisterEffect( channel, empty_effect, cleanup_when_channel_finished, shifted_effect );
 }
 
 void load_soundset()

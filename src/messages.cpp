@@ -1,7 +1,8 @@
 #include "messages.h"
 
 #include "calendar.h"
-#include "compatibility.h" // needed for the workaround for the std::to_string bug in some compilers
+// needed for the workaround for the std::to_string bug in some compilers
+#include "compatibility.h" // IWYU pragma: keep
 #include "debug.h"
 #include "game.h"
 #include "input.h"
@@ -10,15 +11,23 @@
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
+#include "catacharset.h"
+#include "color.h"
+#include "cursesdef.h"
+#include "enums.h"
 
-#ifdef __ANDROID__
-#include "options.h"
+#if defined(__ANDROID__)
 #include <SDL_keyboard.h>
+
+#include "options.h"
 #endif
 
 #include <deque>
 #include <iterator>
 #include <algorithm>
+#include <memory>
+#include <sstream>
+#include <type_traits>
 
 // sidebar messages flow direction
 extern bool log_from_top;
@@ -51,7 +60,7 @@ struct game_message : public JsonDeserializer, public JsonSerializer {
             return message;
         }
         //~ Message %s on the message log was repeated %d times, e.g. "You hear a whack! x 12"
-        return string_format( _( "%s x %d" ), message.c_str(), count );
+        return string_format( _( "%s x %d" ), message, count );
     }
 
     bool is_new( const time_point &current ) const {
@@ -388,9 +397,9 @@ void Messages::dialog::init()
         const size_t msg_ind = log_from_top ? ind : msg_count - 1 - ind;
         const game_message &msg = player_messages.history( msg_ind );
         const auto &folded = foldstring( msg.get_with_count(), msg_width );
-        for( auto it = folded.begin(); it != folded.end(); ++it ) {
+        for( const auto &it : folded ) {
             folded_filtered.emplace_back( folded_all.size() );
-            folded_all.emplace_back( msg_ind, *it );
+            folded_all.emplace_back( msg_ind, it );
         }
     }
 
@@ -585,7 +594,7 @@ void Messages::dialog::input()
             }
         } else if( action == "FILTER" ) {
             filtering = true;
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
             if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
                 SDL_StartTextInput();
             }

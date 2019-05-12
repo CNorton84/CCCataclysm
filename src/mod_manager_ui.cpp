@@ -1,12 +1,15 @@
-#include "mod_manager.h"
+#include "mod_manager.h" // IWYU pragma: associated
+
+#include <algorithm>
+#include <exception>
+#include <sstream>
 
 #include "debug.h"
 #include "dependency_tree.h"
 #include "output.h"
 #include "string_formatter.h"
 #include "translations.h"
-
-#include <algorithm>
+#include "string_id.h"
 
 mod_ui::mod_ui( mod_manager &mman )
     : active_manager( mman )
@@ -24,12 +27,18 @@ std::string mod_ui::get_information( const MOD_INFORMATION *mod )
 
     if( !mod->authors.empty() ) {
         info << "<color_light_blue>" << ngettext( "Author", "Authors", mod->authors.size() )
-             << "</color>: " << enumerate_as_string( mod->authors ) << "\n";
+             << "</color>: " << enumerate_as_string( mod->authors );
+        if( mod->maintainers.empty() ) {
+            info << "\n";
+        } else {
+            info << "  ";
+        }
     }
 
     if( !mod->maintainers.empty() ) {
         info << "<color_light_blue>" << ngettext( "Maintainer", "Maintainers", mod->maintainers.size() )
-             << "</color>: " << enumerate_as_string( mod->maintainers ) << "\n";
+             << u8"</color>:\u00a0"/*non-breaking space*/
+             << enumerate_as_string( mod->maintainers ) << "\n";
     }
 
     if( !mod->dependencies.empty() ) {
@@ -51,15 +60,7 @@ std::string mod_ui::get_information( const MOD_INFORMATION *mod )
     }
 
     if( !mod->description.empty() ) {
-        info << _( mod->description.c_str() ) << "\n";
-    }
-
-    if( mod->need_lua() ) {
-#ifdef LUA
-        info << _( "This mod requires <color_green>Lua support</color>" ) << "\n";
-#else
-        info << _( "This mod requires <color_red>Lua support</color>" ) << "\n";
-#endif
+        info << _( mod->description ) << "\n";
     }
 
     std::string note = !mm_tree.is_available( mod->ident ) ? mm_tree.get_node(
@@ -178,8 +179,6 @@ void mod_ui::try_shift( char direction, size_t &selection, std::vector<mod_id> &
     // eliminates 'uninitialized variable' warning
     size_t newsel = 0;
     size_t oldsel = 0;
-    mod_id selstring;
-    mod_id modstring;
     int selshift = 0;
 
     // shift up (towards 0)
@@ -200,8 +199,8 @@ void mod_ui::try_shift( char direction, size_t &selection, std::vector<mod_id> &
         return;
     }
 
-    modstring = active_list[newsel];
-    selstring = active_list[oldsel];
+    mod_id modstring = active_list[newsel];
+    mod_id selstring = active_list[oldsel];
 
     // we can shift!
     // switch values!
@@ -221,18 +220,15 @@ bool mod_ui::can_shift_up( long selection, const std::vector<mod_id> &active_lis
     std::vector<mod_id> dependencies = mm_tree.get_dependencies_of_X_as_strings(
                                            active_list[selection] );
 
-    int newsel;
-    mod_id modstring;
-
     // figure out if we can move up!
     if( selection == 0 ) {
         // can't move up, don't bother trying
         return false;
     }
     // see if the mod at selection-1 is a) a core, or b) is depended on by this mod
-    newsel = selection - 1;
+    int newsel = selection - 1;
 
-    modstring = active_list[newsel];
+    mod_id modstring = active_list[newsel];
 
     if( modstring->core ||
         std::find( dependencies.begin(), dependencies.end(), modstring ) != dependencies.end() ) {

@@ -194,7 +194,7 @@
       { "item": "solar_cell", "count": [ 20, 60 ] }
     ],
     "flags": [ "SOLAR_PANEL", "OBSTACLE" ]
-  },  
+  },
   {
     "id": "tread1",
     "type": "vehicle_part",
@@ -217,6 +217,8 @@
       { "item": "chain", "count": [ 1, 3 ] }
     ],
     "rolling_resistance": 6,
+    "wheel_type": "treads",
+    "contact_area": 900,
     "flags": [ "WHEEL", "VARIABLE_SIZE", "MULTISQUARE", "TRACKED", "NO_JACK" ]
   },
   {
@@ -240,6 +242,8 @@
       { "item": "chain", "count": [ 3, 6 ] }
     ],
     "rolling_resistance": 5,
+    "wheel_type": "treads",
+    "contact_area": 2500,
     "flags": [ "WHEEL", "VARIABLE_SIZE", "MULTISQUARE", "TRACKED", "NO_JACK" ]
   },
   {
@@ -263,6 +267,8 @@
       { "item": "chain", "count": [ 3, 4 ] }
     ],
     "rolling_resistance": 5,
+    "wheel_type": "treads",
+    "contact_area": 3600,
     "flags": [ "WHEEL", "VARIABLE_SIZE", "MULTISQUARE", "TRACKED", "NO_JACK" ]
   },
   {

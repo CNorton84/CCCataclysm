@@ -1,5 +1,8 @@
-#include "catch/catch.hpp"
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "catch/catch.hpp"
 #include "game.h"
 #include "item.h"
 #include "iteminfo_query.h"

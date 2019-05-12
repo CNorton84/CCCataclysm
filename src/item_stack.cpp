@@ -1,10 +1,11 @@
 #include "item_stack.h"
 
-#include "item.h"
-#include "units.h"
-
 #include <algorithm>
 #include <list>
+#include <iterator>
+
+#include "item.h"
+#include "units.h"
 
 size_t item_stack::size() const
 {
@@ -76,7 +77,7 @@ item &item_stack::operator[]( size_t index )
 
 units::volume item_stack::stored_volume() const
 {
-    units::volume ret = 0;
+    units::volume ret = 0_ml;
     for( const item &it : *mystack ) {
         ret += it.volume();
     }
@@ -93,7 +94,7 @@ long item_stack::amount_can_fit( const item &it ) const
         return 0l;
     }
     // Call max because a tile may have been overfilled to begin with (e.g. #14115)
-    long ret = std::max( 0l, it.charges_per_volume( free_volume() ) );
+    const long ret = std::max( 0l, it.charges_per_volume( free_volume() ) );
     return it.count_by_charges() ? std::min( ret, it.charges ) : ret;
 }
 
