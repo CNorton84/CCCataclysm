@@ -1,6 +1,6 @@
 #include "iuse.h"
 
-#include <limits.h>
+#include <climits>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -3123,7 +3123,7 @@ int iuse::circsaw_on( player *p, item *it, bool t, const tripoint & )
                           15, 7, _( "Your circular saw buzzes." ) );
 }
 
-int iuse::jackhammer( player *p, item *it, bool, const tripoint & )
+int iuse::jackhammer( player *p, item *it, bool, const tripoint &pos )
 {
     // use has_enough_charges to check for UPS availability
     // p is assumed to exist for iuse cases
@@ -3136,17 +3136,15 @@ int iuse::jackhammer( player *p, item *it, bool, const tripoint & )
         return 0;
     }
 
-    const cata::optional<tripoint> pnt_ = choose_adjacent( _( "Drill where?" ) );
-    if( !pnt_ ) {
-        return 0;
+    tripoint pnt = pos;
+    if( pos == p->pos() ) {
+        const cata::optional<tripoint> pnt_ = choose_adjacent( _( "Drill where?" ) );
+        if( !pnt_ ) {
+            return 0;
+        }
+        pnt = *pnt_;
     }
-    const tripoint pnt = *pnt_;
 
-    if( pnt == p->pos() ) {
-        p->add_msg_if_player( _( "My god! Let's talk it over OK?" ) );
-        p->add_msg_if_player( _( "Don't do anything rash." ) );
-        return 0;
-    }
     if( !g->m.has_flag( "MINEABLE", pnt ) ) {
         p->add_msg_if_player( m_info, _( "You can't drill there." ) );
         return 0;
@@ -3156,21 +3154,31 @@ int iuse::jackhammer( player *p, item *it, bool, const tripoint & )
         return 0;
     }
 
+
+    int turns = 100;
+    if( g->m.move_cost( pnt ) == 2 ) {
+        // We're breaking up some flat surface like pavement, which is much easier
+        turns /= 2;
+    }
+    turns *= MINUTES( 30 );
+
     const std::vector<npc *> helpers = g->u.get_crafting_helpers();
     const int helpersize = g->u.get_num_crafting_helpers( 3 );
+    turns *= ( 1 - ( helpersize / 10 ) );
     for( const npc *np : helpers ) {
         add_msg( m_info, _( "%s helps with this task..." ), np->name );
         break;
     }
-    p->assign_activity( activity_id( "ACT_JACKHAMMER" ),
-                        ( to_turns<int>( 30_minutes ) * 100 ) * ( 1 - ( helpersize / 10 ) ), -1,
-                        p->get_item_position( it ) );
+
+    p->assign_activity( activity_id( "ACT_JACKHAMMER" ), turns, -1, p->get_item_position( it ) );
     p->activity.placement = pnt;
+    p->add_msg_if_player( _( "You start drilling into the %1$s with your %2$s." ),
+                          g->m.tername( pnt ), it->tname() );
 
     return it->type->charges_to_use();
 }
 
-int iuse::pickaxe( player *p, item *it, bool, const tripoint & )
+int iuse::pickaxe( player *p, item *it, bool, const tripoint &pos )
 {
     if( p->is_npc() ) {
         // Long action
@@ -3182,17 +3190,15 @@ int iuse::pickaxe( player *p, item *it, bool, const tripoint & )
         return 0;
     }
 
-    const cata::optional<tripoint> pnt_ = choose_adjacent( _( "Mine where?" ) );
-    if( !pnt_ ) {
-        return 0;
+    tripoint pnt = pos;
+    if( pos == p->pos() ) {
+        const cata::optional<tripoint> pnt_ = choose_adjacent( _( "Mine where?" ) );
+        if( !pnt_ ) {
+            return 0;
+        }
+        pnt = *pnt_;
     }
-    const tripoint pnt = *pnt_;
 
-    if( pnt == p->pos() ) {
-        p->add_msg_if_player( _( "Mining the depths of your experience, you realize that it's "
-                                 "best not to dig yourself into a hole.  You stop digging." ) );
-        return 0;
-    }
     if( !g->m.has_flag( "MINEABLE", pnt ) ) {
         p->add_msg_if_player( m_info, _( "You can't mine there." ) );
         return 0;
@@ -3202,23 +3208,67 @@ int iuse::pickaxe( player *p, item *it, bool, const tripoint & )
         return 0;
     }
 
-    int turns;
+    int turns = 100;
     if( g->m.move_cost( pnt ) == 2 ) {
         // We're breaking up some flat surface like pavement, which is much easier
-        turns = MINUTES( 20 );
-    } else {
-        turns = ( ( MAX_STAT + 4 ) - std::min( p->str_cur, MAX_STAT ) ) * MINUTES( 5 );
+        turns /= 2;
     }
+    turns *= ( ( MAX_STAT + 4 ) - std::min( p->str_cur, MAX_STAT ) ) * MINUTES( 5 );
+
     const std::vector<npc *> helpers = g->u.get_crafting_helpers();
     const int helpersize = g->u.get_num_crafting_helpers( 3 );
-    turns = turns * ( 1 - ( helpersize / 10 ) );
+    turns *= ( 1 - ( helpersize / 10 ) );
     for( const npc *np : helpers ) {
         add_msg( m_info, _( "%s helps with this task..." ), np->name );
         break;
     }
-    p->assign_activity( activity_id( "ACT_PICKAXE" ), turns * 100, -1, p->get_item_position( it ) );
+
+    p->assign_activity( activity_id( "ACT_PICKAXE" ), turns, -1, p->get_item_position( it ) );
     p->activity.placement = pnt;
-    p->add_msg_if_player( _( "You attack the %1$s with your %2$s." ),
+    p->add_msg_if_player( _( "You strike the %1$s with your %2$s." ),
+                          g->m.tername( pnt ), it->tname() );
+    return 0; // handled when the activity finishes
+}
+
+int iuse::burrow( player *p, item *it, bool, const tripoint &pos )
+{
+    if( p->is_npc() ) {
+        // Long action
+        return 0;
+    }
+
+    if( p->is_underwater() ) {
+        p->add_msg_if_player( m_info, _( "You can't do that while underwater." ) );
+        return 0;
+    }
+
+    tripoint pnt = pos;
+    if( pos == p->pos() ) {
+        const cata::optional<tripoint> pnt_ = choose_adjacent( _( "Burrow where?" ) );
+        if( !pnt_ ) {
+            return 0;
+        }
+        pnt = *pnt_;
+    }
+
+    if( !g->m.has_flag( "MINEABLE", pnt ) ) {
+        p->add_msg_if_player( m_info, _( "You can't burrow there." ) );
+        return 0;
+    }
+    if( g->m.veh_at( pnt ) ) {
+        p->add_msg_if_player( _( "There's a vehicle in the way!" ) );
+        return 0;
+    }
+
+    int turns = 100;
+    if( g->m.move_cost( pnt ) == 2 ) {
+        // We're breaking up some flat surface like pavement, which is much easier
+        turns /= 2;
+    }
+    turns *= ( ( MAX_STAT + 3 ) - std::min( p->str_cur, MAX_STAT ) ) * MINUTES( 2 );
+    p->assign_activity( activity_id( "ACT_BURROW" ), turns, -1, 0 );
+    p->activity.placement = pnt;
+    p->add_msg_if_player( _( "You start tearing into the %1$s with your %2$s." ),
                           g->m.tername( pnt ), it->tname() );
     return 0; // handled when the activity finishes
 }
@@ -7730,10 +7780,10 @@ int iuse::hairkit( player *p, item *it, bool, const tripoint & )
 
 int iuse::weather_tool( player *p, item *it, bool, const tripoint & )
 {
-    const w_point weatherPoint = *g->weather_precise;
+    const w_point weatherPoint = *g->weather.weather_precise;
 
     /* Possibly used twice. Worth spending the time to precalculate. */
-    const auto player_local_temp = g->get_temperature( g->u.pos() );
+    const auto player_local_temp = g->weather.get_temperature( g->u.pos() );
 
     if( it->typeId() == "weather_reader" ) {
         p->add_msg_if_player( m_neutral, _( "The %s's monitor slowly outputs the data..." ),
@@ -7752,12 +7802,12 @@ int iuse::weather_tool( player *p, item *it, bool, const tripoint & )
         if( it->typeId() == "hygrometer" ) {
             p->add_msg_if_player(
                 m_neutral, _( "The %1$s reads %2$s." ), it->tname(),
-                print_humidity( get_local_humidity( weatherPoint.humidity, g->weather,
+                print_humidity( get_local_humidity( weatherPoint.humidity, g->weather.weather,
                                                     g->is_sheltered( g->u.pos() ) ) ) );
         } else {
             p->add_msg_if_player(
                 m_neutral, _( "Relative Humidity: %s." ),
-                print_humidity( get_local_humidity( weatherPoint.humidity, g->weather,
+                print_humidity( get_local_humidity( weatherPoint.humidity, g->weather.weather,
                                                     g->is_sheltered( g->u.pos() ) ) ) );
         }
     }
@@ -7779,8 +7829,9 @@ int iuse::weather_tool( player *p, item *it, bool, const tripoint & )
         }
         const oter_id &cur_om_ter = overmap_buffer.ter( p->global_omt_location() );
         /* windpower defined in internal velocity units (=.01 mph) */
-        double windpower = static_cast<int>( 100.0f * get_local_windpower( g->windspeed + vehwindspeed,
-                                             cur_om_ter, p->pos(), g->winddirection, g->is_sheltered( p->pos() ) ) );
+        double windpower = static_cast<int>( 100.0f * get_local_windpower( g->weather.windspeed +
+                                             vehwindspeed,
+                                             cur_om_ter, p->pos(), g->weather.winddirection, g->is_sheltered( p->pos() ) ) );
 
         p->add_msg_if_player( m_neutral, _( "Wind Speed: %.1f %s." ),
                               convert_velocity( windpower, VU_WIND ),
@@ -7790,7 +7841,7 @@ int iuse::weather_tool( player *p, item *it, bool, const tripoint & )
             print_temperature(
                 get_local_windchill( weatherPoint.temperature, weatherPoint.humidity, windpower / 100 ) +
                 player_local_temp ) );
-        std::string dirstring = get_dirstring( g->winddirection );
+        std::string dirstring = get_dirstring( g->weather.winddirection );
         p->add_msg_if_player( m_neutral, _( "Wind Direction: From the %s." ), dirstring );
     }
 
@@ -8034,13 +8085,12 @@ int iuse::washclothes( player *p, item *, bool, const tripoint & )
     auto is_liquid = []( const item & it ) {
         return it.made_of( LIQUID ) || it.contents_made_of( LIQUID );
     };
-    long available_water = std::max(
-                               crafting_inv.charges_of( "water", std::numeric_limits<long>::max(), is_liquid ),
-                               crafting_inv.charges_of( "clean_water", std::numeric_limits<long>::max(), is_liquid )
-                           );
-    available_water = std::min<long>( available_water, INT_MAX );
-    long available_cleanser = std::max( crafting_inv.charges_of( "soap" ),
-                                        crafting_inv.charges_of( "detergent" ) );
+    int available_water = std::max(
+                              crafting_inv.charges_of( "water", INT_MAX, is_liquid ),
+                              crafting_inv.charges_of( "clean_water", INT_MAX, is_liquid )
+                          );
+    int available_cleanser = std::max( crafting_inv.charges_of( "soap" ),
+                                       crafting_inv.charges_of( "detergent" ) );
 
     const inventory_filter_preset preset( []( const item_location & location ) {
         return location->item_tags.find( "FILTHY" ) != location->item_tags.end();
@@ -8326,7 +8376,7 @@ ret_val<bool> use_function::can_call( const player &p, const item &it, bool t,
     return actor->can_use( p, it, t, pos );
 }
 
-long use_function::call( player &p, item &it, bool active, const tripoint &pos ) const
+int use_function::call( player &p, item &it, bool active, const tripoint &pos ) const
 {
     return actor->use( p, it, active, pos );
 }

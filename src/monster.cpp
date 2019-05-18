@@ -1,6 +1,6 @@
 #include "monster.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <sstream>
 #include <memory>
@@ -940,6 +940,7 @@ monster_attitude monster::attitude( const Character *u ) const
         static const trait_id pheromone_mammal( "PHEROMONE_MAMMAL" );
         static const trait_id pheromone_insect( "PHEROMONE_INSECT" );
         static const trait_id mycus_thresh( "THRESH_MYCUS" );
+        static const trait_id mycus_friend( "MYCUS_FRIEND" );
         static const trait_id terrifying( "TERRIFYING" );
         if( faction == faction_bee ) {
             if( u->has_trait( trait_BEE ) ) {
@@ -949,7 +950,8 @@ monster_attitude monster::attitude( const Character *u ) const
             }
         }
 
-        if( type->in_species( FUNGUS ) && u->has_trait( mycus_thresh ) ) {
+        if( type->in_species( FUNGUS ) && ( u->has_trait( mycus_thresh ) ||
+                                            u->has_trait( mycus_friend ) ) ) {
             return MATT_FRIEND;
         }
 
@@ -1715,6 +1717,11 @@ float monster::dodge_roll()
     return get_dodge() * 5;
 }
 
+int monster::get_grab_strength() const
+{
+    return type->grab_strength;
+}
+
 float monster::fall_damage_mod() const
 {
     if( has_flag( MF_FLIES ) ) {
@@ -1887,8 +1894,9 @@ void monster::process_turn()
                     }
                 }
             }
-            if( g->lightning_active && !has_effect( effect_supercharged ) && g->m.is_outside( pos() ) ) {
-                g->lightning_active = false; // only one supercharge per strike
+            if( g->weather.lightning_active && !has_effect( effect_supercharged ) &&
+                g->m.is_outside( pos() ) ) {
+                g->weather.lightning_active = false; // only one supercharge per strike
                 sounds::sound( pos(), 300, sounds::sound_t::combat, _( "BOOOOOOOM!!!" ), false, "environment",
                                "thunder_near" );
                 sounds::sound( pos(), 20, sounds::sound_t::combat, _( "vrrrRRRUUMMMMMMMM!" ), false, "explosion",

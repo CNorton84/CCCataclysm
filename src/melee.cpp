@@ -1,6 +1,6 @@
 #include "melee.h"
 
-#include <limits.h>
+#include <climits>
 #include <algorithm>
 #include <cstdlib>
 #include <sstream>
@@ -52,6 +52,7 @@
 #include "type_id.h"
 
 static const bionic_id bio_cqb( "bio_cqb" );
+static const bionic_id bio_memory( "bio_memory" );
 
 static const matec_id tec_none( "tec_none" );
 static const matec_id WBLOCK_1( "WBLOCK_1" );
@@ -1284,7 +1285,9 @@ void player::perform_technique( const ma_technique &technique, Creature &t, dama
     //player has a very small chance, based on their intelligence, to learn a style whilst using the CQB bionic
     if( has_active_bionic( bio_cqb ) && !has_martialart( style_selected ) ) {
         /** @EFFECT_INT slightly increases chance to learn techniques when using CQB bionic */
-        if( one_in( 1400 - ( get_int() * 50 ) ) ) {
+        // Enhanced Memory Banks bionic doubles chance to learn martial art
+        const int bionic_boost = has_active_bionic( bionic_id( bio_memory ) ) ? 2 : 1;
+        if( one_in( ( 1400 - ( get_int() * 50 ) ) / bionic_boost ) ) {
             ma_styles.push_back( style_selected );
             add_msg_if_player( m_good, _( "You have learned %s from extensive practice with the CQB Bionic." ),
                                _( style_selected.obj().name ) );
@@ -1953,7 +1956,7 @@ int player::attack_speed( const item &weap ) const
     return move_cost;
 }
 
-double player::weapon_value( const item &weap, long ammo ) const
+double player::weapon_value( const item &weap, int ammo ) const
 {
     const double val_gun = gun_value( weap, ammo );
     const double val_melee = melee_value( weap );
@@ -2024,6 +2027,11 @@ double player::unarmed_value() const
 void player::disarm( npc &target )
 {
     if( !target.is_armed() ) {
+        return;
+    }
+
+    if( target.is_hallucination() ) {
+        target.on_attacked( *this );
         return;
     }
 

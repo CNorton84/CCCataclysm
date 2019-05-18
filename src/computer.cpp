@@ -1,8 +1,8 @@
 #include "computer.h"
 
-#include <limits.h>
-#include <stdlib.h>
-#include <math.h>
+#include <climits>
+#include <cstdlib>
+#include <cmath>
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -75,7 +75,7 @@ computer_option::computer_option()
 {
 }
 
-computer_option::computer_option( std::string N, computer_action A, int S )
+computer_option::computer_option( const std::string &N, computer_action A, int S )
     : name( N ), action( A ), security( S )
 {
 }
@@ -427,7 +427,7 @@ void computer::activate_function( computer_action action )
                                     item sewage( "sewage", calendar::turn );
                                     auto candidates = g->m.i_at( x1, y1 );
                                     for( auto &candidate : candidates ) {
-                                        long capa = candidate.get_remaining_capacity_for_liquid( sewage );
+                                        int capa = candidate.get_remaining_capacity_for_liquid( sewage );
                                         if( capa <= 0 ) {
                                             continue;
                                         }
@@ -1432,7 +1432,7 @@ SHORTLY. TO ENSURE YOUR SAFETY PLEASE FOLLOW THE STEPS BELOW. \n\
                 break;
             }
             auto items = g->m.i_at( platform );
-            if( items.size() != 0 ) {
+            if( !items.empty() ) {
                 print_line( _( "Moving items: PLATFORM --> UNLOADING BAY." ) );
             } else {
                 print_line( _( "No items detected at: PLATFORM." ) );
@@ -1442,7 +1442,7 @@ SHORTLY. TO ENSURE YOUR SAFETY PLEASE FOLLOW THE STEPS BELOW. \n\
             }
             g->m.i_clear( platform );
             items = g->m.i_at( loading );
-            if( items.size() != 0 ) {
+            if( !items.empty() ) {
                 print_line( _( "Moving items: LOADING BAY --> PLATFORM." ) );
             } else {
                 print_line( _( "No items detected at: LOADING BAY." ) );
