@@ -3082,7 +3082,6 @@
       "attack_text_npc": "%1$s whaps %2$s with their tail",
       "chance": 20,
       "base_damage": { "damage_type": "bash", "amount": 8 }
->>>>>>> upstream/master
     },
     "dodge_modifier": 1
   },
