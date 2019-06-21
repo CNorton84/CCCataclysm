@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "avatar.h"
 #include "coordinate_conversions.h"
 #include "debug.h"
 #include "effect.h"
@@ -56,7 +57,7 @@
 #   endif
 #endif
 
-#define dbg(x) DebugLog((DebugLevel)(x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
+#define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
 
 weather_type previous_weather;
 int prev_hostiles = 0;
@@ -206,11 +207,11 @@ static std::vector<centroid> cluster_sounds( std::vector<std::pair<tripoint, int
     return sound_clusters;
 }
 
-int get_signal_for_hordes( const centroid &centr )
+static int get_signal_for_hordes( const centroid &centr )
 {
     //Volume in  tiles. Signal for hordes in submaps
     //modify vol using weather vol.Weather can reduce monster hearing
-    const int vol = centr.volume - weather_data( g->weather.weather ).sound_attn;
+    const int vol = centr.volume - weather::sound_attn( g->weather.weather );
     const int min_vol_cap = 60; //Hordes can't hear volume lower than this
     const int underground_div = 2; //Coefficient for volume reduction underground
     const int hordes_sig_div = SEEX; //Divider coefficient for hordes
@@ -234,7 +235,7 @@ int get_signal_for_hordes( const centroid &centr )
 void sounds::process_sounds()
 {
     std::vector<centroid> sound_clusters = cluster_sounds( recent_sounds );
-    const int weather_vol = weather_data( g->weather.weather ).sound_attn;
+    const int weather_vol = weather::sound_attn( g->weather.weather );
     for( const auto &this_centroid : sound_clusters ) {
         // Since monsters don't go deaf ATM we can just use the weather modified volume
         // If they later get physical effects from loud noises we'll have to change this
@@ -265,7 +266,7 @@ void sounds::process_sounds()
 }
 
 // skip most movement sounds
-bool describe_sound( sounds::sound_t category )
+static bool describe_sound( sounds::sound_t category )
 {
     if( category == sounds::sound_t::combat || category == sounds::sound_t::speech ||
         category == sounds::sound_t::alert ) {
@@ -278,7 +279,7 @@ void sounds::process_sound_markers( player *p )
 {
     bool is_deaf = p->is_deaf();
     const float volume_multiplier = p->hearing_ability();
-    const int weather_vol = weather_data( g->weather.weather ).sound_attn;
+    const int weather_vol = weather::sound_attn( g->weather.weather );
     for( const auto &sound_event_pair : sounds_since_last_turn ) {
         const tripoint &pos = sound_event_pair.first;
         const sound_event &sound = sound_event_pair.second;
@@ -368,13 +369,17 @@ void sounds::process_sound_markers( player *p )
         }
 
         // skip most movement sounds and our own sounds
-        if( pos != p->pos() && describe_sound( sound.category ) ) {
+        // unless our own sound is an alarm
+        if( ( pos != p->pos() || ( pos == p->pos() && sound.category == sound_t::alarm ) ) &&
+            describe_sound( sound.category ) ) {
             game_message_type severity = m_info;
             if( sound.category == sound_t::combat || sound.category == sound_t::alarm ) {
                 severity = m_warning;
             }
             // if we can see it, don't print a direction
-            if( p->sees( pos ) ) {
+            if( pos == p->pos() ) {
+                add_msg( severity, _( "From yourself you hear %1$s." ), description );
+            } else if( p->sees( pos ) ) {
                 add_msg( severity, _( "You hear %1$s" ), description );
             } else {
                 std::string direction = direction_name( direction_from( p->pos(), pos ) );
@@ -548,8 +553,13 @@ void sfx::do_vehicle_engine_sfx()
     } else if( g->u.in_sleep_state() && audio_muted ) {
         return;
     }
-
-    vehicle *veh = &g->m.veh_at( g->u.pos() )->vehicle();
+    optional_vpart_position vpart_opt = g->m.veh_at( g->u.pos() );
+    vehicle *veh;
+    if( vpart_opt.has_value() ) {
+        veh = &vpart_opt->vehicle();
+    } else {
+        return;
+    }
     if( !veh->engine_on ) {
         fade_audio_channel( 23, 100 );
         add_msg( m_debug, "STOP 23" );
@@ -560,7 +570,7 @@ void sfx::do_vehicle_engine_sfx()
 
     for( size_t e = 0; e < veh->engines.size(); ++e ) {
         if( veh->is_engine_on( e ) ) {
-            if( sfx::has_variant_sound( "engine_working",
+            if( sfx::has_variant_sound( "engine_working_internal",
                                         veh->part_info( veh->engines[ e ] ).get_id().str() ) ) {
                 id_and_variant = std::make_pair( "engine_working_internal",
                                                  veh->part_info( veh->engines[ e ] ).get_id().str() );
@@ -604,7 +614,7 @@ void sfx::do_vehicle_engine_sfx()
         current_gear = 3;
     } else if( current_speed > safe_speed / 4 && current_speed <= safe_speed / 3 ) {
         current_gear = 4;
-    } else if( current_speed > safe_speed / 5 && current_speed <= safe_speed / 4 ) {
+    } else if( current_speed > safe_speed / 3 && current_speed <= safe_speed / 2 ) {
         current_gear = 5;
     } else {
         current_gear = 6;
@@ -690,7 +700,7 @@ void sfx::do_vehicle_exterior_engine_sfx()
 
     for( size_t e = 0; e < veh->engines.size(); ++e ) {
         if( veh->is_engine_on( e ) ) {
-            if( sfx::has_variant_sound( "engine_working_exterior",
+            if( sfx::has_variant_sound( "engine_working_external",
                                         veh->part_info( veh->engines[ e ] ).get_id().str() ) ) {
                 id_and_variant = std::make_pair( "engine_working_external",
                                                  veh->part_info( veh->engines[ e ] ).get_id().str() );

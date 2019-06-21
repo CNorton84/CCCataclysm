@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "avatar.h"
 #include "coordinate_conversions.h"
 #include "creature_tracker.h"
 #include "debug.h"
@@ -136,7 +137,7 @@ std::string scent_map::serialize() const
     return rle_out.str();
 }
 
-void chkversion( std::istream &fin )
+static void chkversion( std::istream &fin )
 {
     if( fin.peek() == '#' ) {
         std::string vline;
@@ -322,7 +323,7 @@ void game::load_shortcuts( std::istream &fin )
                 std::list<input_event> &qslist = quick_shortcuts_map[ *it ];
                 qslist.clear();
                 while( ja.has_more() ) {
-                    qslist.push_back( input_event( ja.next_long(), CATA_INPUT_KEYBOARD ) );
+                    qslist.push_back( input_event( ja.next_int(), CATA_INPUT_KEYBOARD ) );
                 }
             }
         }
@@ -1584,7 +1585,19 @@ void faction_manager::serialize( JsonOut &jsout ) const
 
 void faction_manager::deserialize( JsonIn &jsin )
 {
-    jsin.read( factions );
+    jsin.start_array();
+    while( !jsin.end_array() ) {
+        faction add_fac;
+        jsin.read( add_fac );
+        faction *old_fac = get( add_fac.id );
+        if( old_fac ) {
+            *old_fac = add_fac;
+            // force a revalidation of add_fac
+            get( add_fac.id );
+        } else {
+            factions.emplace_back( add_fac );
+        }
+    }
 }
 
 void Creature_tracker::deserialize( JsonIn &jsin )

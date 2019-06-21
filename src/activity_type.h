@@ -31,6 +31,7 @@ class activity_type
         activity_id id_;
         bool rooted_ = false;
         std::string stop_phrase_ = "THIS IS A BUG";
+        std::string verb_ = "THIS IS A BUG";
         bool suspendable_ = true;
         based_on_type based_on_ = based_on_type::SPEED;
         bool no_resume_ = false;
@@ -50,6 +51,9 @@ class activity_type
         std::string stop_phrase() const {
             return stop_phrase_;
         }
+        std::string verb() const {
+            return verb_;
+        }
         based_on_type based_on() const {
             return based_on_;
         }
@@ -62,8 +66,6 @@ class activity_type
         bool will_refuel_fires() const {
             return refuel_fires;
         }
-
-        void update_activity_level( player &p ) const;
 
         void call_do_turn( player_activity *, player * ) const;
         /** Returns whether it had a finish function or not */

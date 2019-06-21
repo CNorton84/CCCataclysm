@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "calendar.h"
 #include "cata_utility.h"
 
 unsigned int rng_bits()
@@ -59,6 +60,11 @@ double rng_exponential( double min, double mean )
 bool one_in( int chance )
 {
     return ( chance <= 1 || rng( 0, chance - 1 ) == 0 );
+}
+
+bool one_turn_in( const time_duration &duration )
+{
+    return one_in( to_turns<int>( duration ) );
 }
 
 bool x_in_y( double x, double y )
@@ -117,9 +123,9 @@ double rng_normal( double lo, double hi )
     return clamp( val, lo, hi );
 }
 
-std::default_random_engine &rng_get_engine()
+cata_default_random_engine &rng_get_engine()
 {
-    static std::default_random_engine eng(
+    static cata_default_random_engine eng(
         std::chrono::high_resolution_clock::now().time_since_epoch().count() );
     return eng;
 }

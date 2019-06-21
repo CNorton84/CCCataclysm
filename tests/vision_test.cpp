@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "catch/catch.hpp"
 #include "game.h"
 #include "player.h"
@@ -22,9 +23,9 @@
 #include "shadowcasting.h"
 #include "type_id.h"
 
-void full_map_test( const std::vector<std::string> &setup,
-                    const std::vector<std::string> &expected_results,
-                    const calendar time )
+static void full_map_test( const std::vector<std::string> &setup,
+                           const std::vector<std::string> &expected_results,
+                           const calendar &time )
 {
     const ter_id t_brick_wall( "t_brick_wall" );
     const ter_id t_window_frame( "t_window_frame" );
@@ -38,14 +39,6 @@ void full_map_test( const std::vector<std::string> &setup,
     g->u.worn.clear(); // Remove any light-emitting clothing
     g->u.clear_effects();
     clear_map();
-    const int mapsize = g->m.getmapsize() * SEEX;
-    for( int z = 11; z < 21; ++z ) {
-        for( int x = 0; x < mapsize; ++x ) {
-            for( int y = 0; y < mapsize; ++y ) {
-                g->m.set( { x, y, z }, t_open_air, f_null );
-            }
-        }
-    }
     g->reset_light_level();
 
     REQUIRE( !g->u.is_blind() );
@@ -350,7 +343,7 @@ TEST_CASE( "vision_day_indoors", "[shadowcasting][vision]" )
         },
         {
             "111",
-            "141",
+            "111",
             "111",
         },
         midday,
@@ -371,9 +364,9 @@ TEST_CASE( "vision_light_shining_in", "[shadowcasting][vision]" )
             "##########",
         },
         {
-            "1144444166",
+            "1144444666",
             "1144444466",
-            "1444444444",
+            "1144444444",
             "1144444444",
             "1144444444",
         },
@@ -393,7 +386,7 @@ TEST_CASE( "vision_no_lights", "[shadowcasting][vision]" )
         },
         {
             "111",
-            "141",
+            "111",
         },
         midnight,
         true
@@ -433,7 +426,7 @@ TEST_CASE( "vision_wall_obstructs_light", "[shadowcasting][vision]" )
         {
             "666",
             "111",
-            "141",
+            "111",
         },
         midnight,
         true
@@ -487,7 +480,7 @@ TEST_CASE( "vision_see_wall_in_moonlight", "[shadowcasting][vision]" )
             "111",
             "111",
             "111",
-            "141",
+            "111",
         },
         DAYS( days_till_full_moon ),
         true
