@@ -466,9 +466,9 @@ void player::hardcoded_effects( effect &it )
             triggered = true;
             add_msg_if_player(m_bad, _("You lose consciousness and begin to seize."));
             sounds::sound(pos(), 10, sounds::sound_t::movement, "Uh... you shouldn't see this but idk", true );
-            add_effect(effect_narcosis, 5_minutes);
-            fall_asleep(5_minutes);
-            add_effect(effect_downed, 5_minutes, num_bp, false, 10000, true);
+            add_effect(effect_narcosis, 1_minutes);
+            fall_asleep(1_minutes);
+            add_effect(effect_downed, 1_minutes, num_bp, false, 10000, true);
             if (one_in(8) || x_in_y(vomit_mod(), 10)) {
                 vomit();
             }
@@ -479,7 +479,7 @@ void player::hardcoded_effects( effect &it )
             }
             mod_stat("stamina", -1000);
             add_msg_if_player(m_bad, _("You gasp for air.  That seizure took a lot out of you."));
-            add_effect(effect_seizure_stamina_drain, 5_minutes);
+            add_effect(effect_seizure_stamina_drain, 1_minutes);
         }
         if (triggered) {
             // Set ourselves up for removal

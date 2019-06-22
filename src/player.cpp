@@ -5312,10 +5312,9 @@ void player::suffer()
                 }
             }
         }
-        if (has_trait(trait_SEIZURE) && one_in(14400)) {
-            mod_pain(5); //Pain is added and then taken away as a kind of hack, so that long-term activities will have a chance to be interrupted.
+        if (has_trait(trait_SEIZURE) && one_turn_in(1_days)) {
             add_effect(effect_seizure, 1_hours);
-            mod_pain(-5);
+            popup(_("You are going to have a seizure soon.  Take Diazepam or find a safe place to wait it out."));
         }
         if( has_trait( trait_CHEMIMBALANCE ) ) {
             if( one_turn_in( 6_hours ) && !has_trait( trait_NOPAIN ) ) {

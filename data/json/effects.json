@@ -10,8 +10,8 @@
 	"type": "effect_type",
 	"id": "seizure",
 	"name": ["Incoming Seizure"],
-	"desc": ["There's a tense, tingling feeling behind your eyes.  You are going to have a seizure soon.  Take some Diazepam or find a safe place to wait it out."],
-	"apply_message": "You are going to have a seizure soon.  Take Diazepam or find a safe place to wait it out",
+	"desc": ["There's a tense, tingling feeling behind your eyes.  You are going to have a seizure soon.  Take some Diazepam or find a safe place to wait it out.  The convulsions may cause you to hit your head against the ground; consider putting on a helmet.  After you come out of the seizure, you may or may not experience nausea."],
+	"apply_message": "You are going to have a seizure soon.  Take Diazepam or find a safe place to wait it out.",
 	"rating": "bad",
 	"base_mods": {
 		"per_mod": [-1],
