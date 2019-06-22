@@ -46,7 +46,7 @@
     "name": "PLAYER_MAX_STAMINA",
     "info": "Sets max stamina value of the player.",
     "stype": "int",
-    "value": 1000
+    "value": 1500
   },
   {
     "type": "EXTERNAL_OPTION",
@@ -74,14 +74,14 @@
     "name": "PLAYER_HEALING_RATE",
     "info": "Set base player healing rate per turn. Default: 0.01",
     "stype": "float",
-    "value": 0.01
+    "value": 0.001
   },
   {
     "type": "EXTERNAL_OPTION",
     "name": "NPC_HEALING_RATE",
     "info": "Set base NPC healing rate per turn. Default: 0.01",
     "stype": "float",
-    "value": 0.01
+    "value": 0.001
   },
   {
     "type": "EXTERNAL_OPTION",
@@ -193,7 +193,7 @@
     "name": "DISABLE_ROBOT_RESPONSE",
     "info": "Disables robot spawning from alerts and from being wanted.",
     "stype": "bool",
-    "value": false
+    "value": true
   },
   {
     "type": "EXTERNAL_OPTION",
