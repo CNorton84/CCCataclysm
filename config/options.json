@@ -15,7 +15,7 @@
   },
   { "info": "If true, enables configured auto features below.  Disabled as long as any enemy monster is seen.", "default": "Default: False", "name": "AUTO_FEATURES", "value": "true"
   },
-  { "info": "Action to perform when 'Auto pulp or butcher' is enabled.  Pulp: Pulp corpses you stand on.  - Pulp Adjacent: Also pulp corpses adjacent from you.  - Butcher: Butcher corpses you stand on.", "default": "Default: off - Values: off, pulp, pulp_adjacent, butcher", "name": "AUTO_PULP_BUTCHER", "value": "off"
+  { "info": "Action to perform when 'Auto pulp or butcher' is enabled.  Pulp: Pulp corpses you stand on.  - Pulp Adjacent: Also pulp corpses adjacent from you.  - Butcher: Butcher corpses you stand on.", "default": "Default: off - Values: off, pulp, pulp_adjacent, butcher", "name": "AUTO_PULP_BUTCHER", "value": "pulp_adjacent"
   },
   { "info": "If true, enables automatic use of wielded pickaxes and jackhammers whenever trying to move into mineable terrain.", "default": "Default: False", "name": "AUTO_MINING", "value": "false"
   },
@@ -145,7 +145,7 @@
   },
   { "info": "If true, will display scrolling combat text animations.", "default": "Default: True", "name": "ANIMATION_SCT", "value": "true"
   },
-  { "info": "If true, will display scrolling combat text with Unicode font.", "default": "Default: True", "name": "ANIMATION_SCT_USE_FONT", "value": "true"
+  { "info": "If true, will display scrolling combat text with Unicode font.", "default": "Default: True", "name": "ANIMATION_SCT_USE_FONT", "value": "false"
   },
   { "info": "The amount of time to pause between animation frames in ms.", "default": "Default: 10 - Min: 0, Max: 100", "name": "ANIMATION_DELAY", "value": "10"
   },
@@ -203,7 +203,7 @@
   },
   { "info": "If true, tries to use color modulated textures to speed-up ASCII drawing.  Requires restart.", "default": "Default: False", "name": "USE_COLOR_MODULATED_TEXTURES", "value": "false"
   },
-  { "info": "Sets the scaling mode, 'none' ( default ) displays at the game's native resolution, 'nearest'  uses low-quality but fast scaling, and 'linear' provides high-quality scaling.", "default": "Default: none - Values: none, nearest, linear", "name": "SCALING_MODE", "value": "linear"
+  { "info": "Sets the scaling mode, 'none' ( default ) displays at the game's native resolution, 'nearest'  uses low-quality but fast scaling, and 'linear' provides high-quality scaling.", "default": "Default: none - Values: none, nearest, linear", "name": "SCALING_MODE", "value": "nearest"
   },
   { "info": "Factor by which to scale the display. Requires restart.", "default": "Default: 1 - Values: 1, 2, 4", "name": "SCALING_FACTOR", "value": "1"
   },
