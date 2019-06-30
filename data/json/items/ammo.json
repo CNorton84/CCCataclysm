@@ -596,6 +596,7 @@
     "id": "bearing",
     "price": 100,
     "name": "bearings",
+    "name_plural": "bearings",
     "symbol": "=",
     "color": "dark_gray",
     "description": "A box of ball bearings, useful as ammunition for slings or slingshots.",
@@ -1372,5 +1373,22 @@
     "count": 7,
     "effects": [ "NEVER_MISFIRES" ],
     "use_action": "RPGDIE"
+  },
+  {
+    "id": "scrap_bronze",
+    "type": "AMMO",
+    "category": "spare_parts",
+    "name": "bronze",
+    "name_plural": "bronze",
+    "description": "Decent-sized chunks of bronze, for fashioning some old-school items.",
+    "weight": 218,
+    "volume": 1,
+    "price": 1200,
+    "to_hit": -2,
+    "bashing": 1,
+    "material": "bronze",
+    "symbol": ",",
+    "color": "yellow",
+    "ammo_type": "components"
   }
 ]
