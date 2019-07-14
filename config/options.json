@@ -57,13 +57,13 @@
   },
   { "info": "If true, music and sound are enabled.", "default": "Default: True", "name": "SOUND_ENABLED", "value": "false"
   },
-  { "info": "Choose the soundpack you want to use.", "default": "Default: basic - Values: basic", "name": "SOUNDPACKS", "value": "basic"
+  { "info": "Choose the soundpack you want to use.  Requires restart.", "default": "Default: basic - Values: basic", "name": "SOUNDPACKS", "value": "basic"
   },
-  { "info": "Adjust the volume of the music being played in the background.", "default": "Default: 100 - Min: 0, Max: 200", "name": "MUSIC_VOLUME", "value": "100"
+  { "info": "Adjust the volume of the music being played in the background.", "default": "Default: 100 - Min: 0, Max: 128", "name": "MUSIC_VOLUME", "value": "100"
   },
-  { "info": "Adjust the volume of sound effects being played by the game.", "default": "Default: 100 - Min: 0, Max: 200", "name": "SOUND_EFFECT_VOLUME", "value": "100"
+  { "info": "Adjust the volume of sound effects being played by the game.", "default": "Default: 100 - Min: 0, Max: 128", "name": "SOUND_EFFECT_VOLUME", "value": "100"
   },
-  { "info": "Adjust the volume of ambient sounds being played by the game.", "default": "Default: 100 - Min: 0, Max: 200", "name": "AMBIENT_SOUND_VOLUME", "value": "100"
+  { "info": "Adjust the volume of ambient sounds being played by the game.", "default": "Default: 100 - Min: 0, Max: 128", "name": "AMBIENT_SOUND_VOLUME", "value": "100"
   },
   { "info": "Switch Language.", "default": "Default:  - Values: en, de, es_AR, es_ES, fr, hu, ja, ko, pl, ru, zh_CN, zh_TW", "name": "USE_LANG", "value": ""
   },
@@ -169,7 +169,7 @@
   },
   { "info": "Set the map font size.  Requires restart.", "default": "Default: 16 - Min: 8, Max: 100", "name": "MAP_FONT_SIZE", "value": "8"
   },
-  { "info": "Set the overmap font width.  Requires restart.", "default": "Default: 8 - Min: 8, Max: 100", "name": "OVERMAP_FONT_WIDTH", "value": "8"
+  { "info": "Set the overmap font width.  Requires restart.", "default": "Default: 8 - Min: 8, Max: 100", "name": "OVERMAP_FONT_WIDTH", "value": "16"
   },
   { "info": "Set the overmap font height.  Requires restart.", "default": "Default: 16 - Min: 8, Max: 100", "name": "OVERMAP_FONT_HEIGHT", "value": "16"
   },
@@ -221,7 +221,7 @@
   },
   { "info": "Set the level of skill rust.  Vanilla: Vanilla Cataclysm - Capped: Capped at skill levels 2 - Int: Intelligence dependent - IntCap: Intelligence dependent, capped - Off: None at all.", "default": "Default: off - Values: vanilla, capped, int, intcap, off", "name": "SKILL_RUST", "value": "off"
   },
-  { "info": "If false, vision is limited to current z-level.  If true and the world is in z-level mode, the vision will extend beyond current z-level.  Currently very bugged!", "default": "Default: False", "name": "FOV_3D", "value": "true"
+  { "info": "If false, vision is limited to current z-level.  If true and the world is in z-level mode, the vision will extend beyond current z-level.  Currently very bugged!", "default": "Default: False", "name": "FOV_3D", "value": "false"
   },
   { "info": "If true, file path names are going to be transcoded from system encoding to UTF-8 when reading and will be transcoded back when writing.  Mainly for CJK Windows users.", "default": "Default: True", "name": "ENCODING_CONV", "value": "true"
   },
