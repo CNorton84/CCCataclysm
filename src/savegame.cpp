@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
+#include <unordered_map>
 
 #include "avatar.h"
 #include "coordinate_conversions.h"
@@ -32,7 +33,6 @@
 #include "json.h"
 #include "omdata.h"
 #include "overmap_types.h"
-#include "player.h"
 #include "regional_settings.h"
 #include "int_id.h"
 #include "string_id.h"
@@ -282,7 +282,7 @@ void game::load_weather( std::istream &fin )
     if( fin.peek() == 'l' ) {
         std::string line;
         getline( fin, line );
-        weather.lightning_active = ( line.compare( "lightning: 1" ) == 0 );
+        weather.lightning_active = line == "lightning: 1";
     } else {
         weather.lightning_active = false;
     }
@@ -726,11 +726,11 @@ void overmap::convert_terrain( const std::unordered_map<tripoint, std::string> &
         } else if( old == "bunker" ) {
             if( pos.z < 0 ) {
                 new_id = oter_id( "bunker_basement" );
-            } else if( is_ot_match( "road", get_ter( pos.x + 1, pos.y, pos.z ), ot_match_type::TYPE ) ) {
+            } else if( is_ot_match( "road", get_ter( pos.x + 1, pos.y, pos.z ), ot_match_type::type ) ) {
                 new_id = oter_id( "bunker_west" );
-            } else if( is_ot_match( "road", get_ter( pos.x - 1, pos.y, pos.z ), ot_match_type::TYPE ) ) {
+            } else if( is_ot_match( "road", get_ter( pos.x - 1, pos.y, pos.z ), ot_match_type::type ) ) {
                 new_id = oter_id( "bunker_east" );
-            } else if( is_ot_match( "road", get_ter( pos.x, pos.y + 1, pos.z ), ot_match_type::TYPE ) ) {
+            } else if( is_ot_match( "road", get_ter( pos.x, pos.y + 1, pos.z ), ot_match_type::type ) ) {
                 new_id = oter_id( "bunker_north" );
             } else {
                 new_id = oter_id( "bunker_south" );
@@ -964,9 +964,9 @@ void overmap::unserialize( std::istream &fin )
                     if( tracker_member_name == "id" ) {
                         jsin.read( id );
                     } else if( tracker_member_name == "x" ) {
-                        jsin.read( new_tracker.x );
+                        jsin.read( new_tracker.p.x );
                     } else if( tracker_member_name == "y" ) {
-                        jsin.read( new_tracker.y );
+                        jsin.read( new_tracker.p.y );
                     } else if( tracker_member_name == "name" ) {
                         jsin.read( new_tracker.name );
                     }
@@ -1052,7 +1052,7 @@ static void unserialize_array_from_compacted_sequence( JsonIn &jsin, bool ( &arr
     int count = 0;
     bool value = false;
     for( int j = 0; j < OMAPY; j++ ) {
-        for( int i = 0; i < OMAPX; i++ ) {
+        for( auto &array_col : array ) {
             if( count == 0 ) {
                 jsin.start_array();
                 jsin.read( value );
@@ -1060,7 +1060,7 @@ static void unserialize_array_from_compacted_sequence( JsonIn &jsin, bool ( &arr
                 jsin.end_array();
             }
             count--;
-            array[i][j] = value;
+            array_col[j] = value;
         }
     }
 }
@@ -1147,8 +1147,8 @@ static void serialize_array_to_compacted_sequence( JsonOut &json,
     int count = 0;
     int lastval = -1;
     for( int j = 0; j < OMAPY; j++ ) {
-        for( int i = 0; i < OMAPX; i++ ) {
-            const int value = array[i][j];
+        for( const auto &array_col : array ) {
+            const int value = array_col[j];
             if( value != lastval ) {
                 if( count ) {
                     json.write( count );
@@ -1303,12 +1303,14 @@ void overmap::serialize( std::ostream &fout ) const
     json.member( "layers" );
     json.start_array();
     for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
+        auto &layer_terrain = layer[z].terrain;
         int count = 0;
         oter_id last_tertype( -1 );
         json.start_array();
         for( int j = 0; j < OMAPY; j++ ) {
+            // NOLINTNEXTLINE(modernize-loop-convert)
             for( int i = 0; i < OMAPX; i++ ) {
-                oter_id t = layer[z].terrain[i][j];
+                oter_id t = layer_terrain[i][j];
                 if( t != last_tertype ) {
                     if( count ) {
                         json.write( count );
@@ -1393,8 +1395,8 @@ void overmap::serialize( std::ostream &fout ) const
         json.start_object();
         json.member( "id", i.first );
         json.member( "name", i.second.name );
-        json.member( "x", i.second.x );
-        json.member( "y", i.second.y );
+        json.member( "x", i.second.p.x );
+        json.member( "y", i.second.p.y );
         json.end_object();
     }
     json.end_array();

@@ -34,12 +34,13 @@
 #include "string_id.h"
 #include "type_id.h"
 #include "units.h"
+#include "point.h"
 
 struct pathfinding_settings;
 class item_location;
 class SkillLevel;
 class SkillLevelMap;
-enum field_id : int;
+
 class JsonObject;
 class JsonIn;
 class JsonOut;
@@ -163,10 +164,17 @@ class Character : public Creature, public visitable<Character>
     public:
         ~Character() override;
 
-        field_id bloodType() const override;
-        field_id gibType() const override;
+        field_type_id bloodType() const override;
+        field_type_id gibType() const override;
         bool is_warm() const override;
         const std::string &symbol() const override;
+
+        enum stat {
+            STRENGTH,
+            DEXTERITY,
+            INTELLIGENCE,
+            PERCEPTION
+        };
 
         // Character stats
         // TODO: Make those protected
@@ -668,7 +676,7 @@ class Character : public Creature, public visitable<Character>
 
         void drop_invalid_inventory();
 
-        bool has_artifact_with( const art_effect_passive effect ) const;
+        virtual bool has_artifact_with( const art_effect_passive effect ) const;
 
         // --------------- Clothing Stuff ---------------
         /** Returns true if the player is wearing the item. */
@@ -731,7 +739,7 @@ class Character : public Creature, public visitable<Character>
         }
         virtual bool query_yn( const std::string &msg ) const = 0;
 
-        bool is_immune_field( const field_id fid ) const override;
+        bool is_immune_field( const field_type_id fid ) const override;
 
         /** Returns true if the player has some form of night vision */
         bool has_nv();
@@ -898,6 +906,7 @@ class Character : public Creature, public visitable<Character>
         float activity_level = NO_EXERCISE;
 
         std::array<encumbrance_data, num_bp> encumbrance_cache;
+        mutable std::map<std::string, double> cached_info;
 
         /**
          * Traits / mutations of the character. Key is the mutation id (it's also a valid

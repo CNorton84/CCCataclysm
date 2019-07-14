@@ -86,6 +86,7 @@ class ma_technique
         bool defensive;
         bool dummy;
         bool crit_tec;
+        bool crit_ok;
 
         ma_requirements reqs;
 
@@ -229,7 +230,7 @@ class martialart
         std::string name;
         std::string description;
         std::vector<std::string> initiate;
-        std::vector<std::vector<std::string>> autolearn_skills;
+        std::vector<std::pair<std::string, int>> autolearn_skills;
         skill_id primary_skill;
         int learn_difficulty = 0;
         int arm_block;
@@ -278,5 +279,6 @@ void finialize_martial_arts();
 const std::string martialart_difficulty( matype_id mstyle );
 
 std::vector<matype_id> all_martialart_types();
+std::vector<matype_id> autolearn_martialart_types();
 
 #endif

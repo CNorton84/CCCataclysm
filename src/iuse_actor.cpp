@@ -10,7 +10,6 @@
 #include <iterator>
 #include <list>
 #include <memory>
-#include <type_traits>
 
 #include "action.h"
 #include "activity_handlers.h"
@@ -21,7 +20,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "coordinate_conversions.h"
 #include "crafting.h"
 #include "creature.h"
 #include "debug.h"
@@ -63,7 +61,6 @@
 #include "vehicle.h"
 #include "vitamin.h"
 #include "weather.h"
-#include "creature.h"
 #include "enums.h"
 #include "int_id.h"
 #include "inventory.h"
@@ -73,6 +70,8 @@
 #include "player_activity.h"
 #include "recipe.h"
 #include "rng.h"
+#include "flat_set.h"
+#include "point.h"
 
 class npc;
 
@@ -422,10 +421,13 @@ void explosion_iuse::load( JsonObject &obj )
     obj.read( "flashbang_player_immune", flashbang_player_immune );
     obj.read( "fields_radius", fields_radius );
     if( obj.has_member( "fields_type" ) || fields_radius > 0 ) {
-        fields_type = field_from_ident( obj.get_string( "fields_type" ) );
+        fields_type = field_type_id( obj.get_string( "fields_type" ) );
     }
     obj.read( "fields_min_intensity", fields_min_intensity );
     obj.read( "fields_max_intensity", fields_max_intensity );
+    if( fields_max_intensity == 0 ) {
+        fields_max_intensity = fields_type.obj().get_max_intensity();
+    }
     obj.read( "emp_blast_radius", emp_blast_radius );
     obj.read( "scrambler_blast_radius", scrambler_blast_radius );
     obj.read( "sound_volume", sound_volume );
@@ -533,6 +535,8 @@ int unfold_vehicle_iuse::use( player &p, item &it, bool /*t*/, const tripoint &/
         p.add_msg_if_player( m_info, _( "There's no room to unfold the %s." ), it.tname() );
         return 0;
     }
+    faction *yours = g->faction_manager_ptr->get( faction_id( "your_followers" ) );
+    veh->set_owner( yours );
 
     // Mark the vehicle as foldable.
     veh->tags.insert( "convertible" );
@@ -631,8 +635,8 @@ void consume_drug_iuse::info( const item &, std::vector<iteminfo> &dump ) const
         if( rate <= 0_turns ) {
             return std::string();
         }
-        const int lo = int( v.second.first  * rate / 1_days * 100 );
-        const int hi = int( v.second.second * rate / 1_days * 100 );
+        const int lo = static_cast<int>( v.second.first  * rate / 1_days * 100 );
+        const int hi = static_cast<int>( v.second.second * rate / 1_days * 100 );
 
         return string_format( lo == hi ? "%s (%i%%)" : "%s (%i-%i%%)", v.first.obj().name(), lo,
                               hi );
@@ -689,7 +693,7 @@ int consume_drug_iuse::use( player &p, item &it, bool, const tripoint & ) const
         p.mod_stat( stat_adjustment.first, stat_adjustment.second );
     }
     for( const auto &field : fields_produced ) {
-        const field_id fid = field_from_ident( field.first );
+        const field_type_id fid = field_type_id( field.first );
         for( int i = 0; i < 3; i++ ) {
             g->m.add_field( {p.posx() + static_cast<int>( rng( -2, 2 ) ), p.posy() + static_cast<int>( rng( -2, 2 ) ), p.posz()},
                             fid,
@@ -1074,16 +1078,28 @@ void reveal_map_actor::load( JsonObject &obj )
     radius = obj.get_int( "radius" );
     message = obj.get_string( "message" );
     JsonArray jarr = obj.get_array( "terrain" );
+    std::string ter;
+    ot_match_type ter_match_type;
     while( jarr.has_more() ) {
-        omt_types.push_back( jarr.next_string() );
+        if( jarr.test_string() ) {
+            ter = jarr.next_string();
+            ter_match_type = ot_match_type::contains;
+        } else {
+            JsonObject jo = jarr.next_object();
+            ter = jo.get_string( "om_terrain" );
+            ter_match_type = jo.get_enum_value<ot_match_type>( jo.get_string( "om_terrain_match_type",
+                             "CONTAINS" ), ot_match_type::contains );
+        }
+        omt_types.push_back( std::make_pair( ter, ter_match_type ) );
     }
 }
 
-void reveal_map_actor::reveal_targets( const tripoint &center, const std::string &target,
+void reveal_map_actor::reveal_targets( const tripoint &center,
+                                       const std::pair<std::string, ot_match_type> &target,
                                        int reveal_distance ) const
 {
-    const auto places = overmap_buffer.find_all( center, target, radius, false,
-                        ot_match_type::CONTAINS );
+    const auto places = overmap_buffer.find_all( center, target.first, radius, false,
+                        target.second );
     for( auto &place : places ) {
         overmap_buffer.reveal( place, reveal_distance );
     }
@@ -3557,7 +3573,7 @@ hp_part heal_actor::use_healing_item( player &healer, player &patient, item &it,
         int highest_damage = 0;
         for( int i = 0; i < num_hp_parts; i++ ) {
             int damage = 0;
-            const body_part i_bp = player::hp_to_bp( hp_part( i ) );
+            const body_part i_bp = player::hp_to_bp( static_cast<hp_part>( i ) );
             if( !patient.has_effect( effect_bandaged, i_bp ) ) {
                 damage += patient.hp_max[i] - patient.hp_cur[i];
             }
@@ -3566,7 +3582,7 @@ hp_part heal_actor::use_healing_item( player &healer, player &patient, item &it,
             damage += infect * patient.get_effect_dur( effect_infected, i_bp ) / 10_minutes;
             if( damage > highest_damage ) {
                 highest_damage = damage;
-                healed = hp_part( i );
+                healed = static_cast<hp_part>( i );
             }
         }
     } else if( patient.is_player() ) {
