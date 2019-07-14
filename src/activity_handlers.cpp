@@ -2156,6 +2156,11 @@ void activity_handlers::oxytorch_finish( player_activity *act, player *p )
     if( g->m.furn( pos ) == f_rack ) {
         g->m.furn_set( pos, f_null );
         g->m.spawn_item( p->pos(), "steel_chunk", rng( 2, 6 ) );
+    }
+    else if (g->m.furn(pos) == f_safe_c || g->m.furn(pos) == f_safe_l) {
+        g->m.furn_set(pos, f_safe_o);
+        g->m.spawn_item(pos, "steel_plate", rng(0, 1));
+        g->m.spawn_item(pos, "sheet_metal", rng(1, 3));
     } else if( ter == t_chainfence || ter == t_chaingate_c || ter == t_chaingate_l ) {
         g->m.ter_set( pos, t_dirt );
         g->m.spawn_item( pos, "pipe", rng( 1, 4 ) );

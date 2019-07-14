@@ -4759,8 +4759,10 @@ int iuse::oxytorch( player *p, item *it, bool, const tripoint & )
     const auto furn = g->m.furn( pnt );
     int turns = 0;
 
-    if( furn == f_rack || ter == t_chainfence_posts ) {
-        turns = to_turns<int>( 2_seconds );
+    if (furn == f_rack || ter == t_chainfence_posts) {
+        turns = to_turns<int>(2_seconds);
+    } else if(furn == f_safe_c || f_safe_l) {
+        turns = to_turns<int>(5_seconds);
     } else if( ter == t_window_enhanced || ter == t_window_enhanced_noglass ) {
         turns = to_turns<int>( 5_seconds );
     } else if( ter == t_chainfence || ter == t_chaingate_c ||
