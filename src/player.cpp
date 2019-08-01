@@ -10382,6 +10382,11 @@ void player::practice( const skill_id &id, int amount, int cap )
         }
     }
 
+
+    if (skill.is_combat_skill()) {
+        amount  = amount * get_option< float >("COMBAT_TRAINING_SPEED");
+    }
+
     if( amount > 0 && level.isTraining() ) {
         int oldLevel = get_skill_level( id );
         get_skill_level_object( id ).train( amount );
@@ -10404,6 +10409,8 @@ void player::practice( const skill_id &id, int amount, int cap )
             focus_pool--;
         }
     }
+
+
 
     get_skill_level_object( id ).practice();
 }

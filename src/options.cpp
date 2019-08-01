@@ -1830,10 +1830,13 @@ void options_manager::add_options_debug()
          0.0, 100.0, 1.0, 0.1
        );
 
-    mOptionsSort["debug"]++;
-
     add("BOOK_TRAINING_SPEED", "debug", translate_marker("Skill training speed from reading"),
         translate_marker("Scales experience gained from reading books.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate."),
+        0.0, 100.0, 1.0, 0.1
+    );
+
+    add("COMBAT_TRAINING_SPEED", "debug", translate_marker("Skill training speed for combat skills"),
+        translate_marker("Scales experience gained for combat skills.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate."),
         0.0, 100.0, 1.0, 0.1
     );
 
