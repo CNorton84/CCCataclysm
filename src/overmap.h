@@ -435,6 +435,8 @@ class overmap
         void load_monster_groups( JsonIn &jo );
         void load_legacy_monstergroups( JsonIn &jo );
         void save_monster_groups( JsonOut &jo ) const;
+    public:
+        static void load_obsolete_terrains( JsonObject &jo );
 };
 
 bool is_river( const oter_id &ter );
