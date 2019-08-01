@@ -1832,6 +1832,13 @@ void options_manager::add_options_debug()
 
     mOptionsSort["debug"]++;
 
+    add("BOOK_TRAINING_SPEED", "debug", translate_marker("Skill training speed from reading"),
+        translate_marker("Scales experience gained from reading books.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate."),
+        0.0, 100.0, 1.0, 0.1
+    );
+
+    mOptionsSort["debug"]++;
+
     add( "SKILL_RUST", "debug", translate_marker( "Skill rust" ),
          translate_marker( "Set the level of skill rust.  Vanilla: Vanilla Cataclysm - Capped: Capped at skill levels 2 - Int: Intelligence dependent - IntCap: Intelligence dependent, capped - Off: None at all." ),
          //~ plain, default, normal

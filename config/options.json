@@ -113,6 +113,8 @@
   },
   { "info": "If true, pressing a key with no set function will not display a notice in the chat log.", "default": "Default: False", "name": "NO_UNKNOWN_COMMAND_MSG", "value": "false"
   },
+  { "info": "Switch between pickup panel being left, right, or overlapping the sidebar.", "default": "Default: left - Values: left, right, overlapping", "name": "PICKUP_POSITION", "value": "left"
+  },
   { "info": "How should confidence and steadiness be communicated to the player.", "default": "Default: bars - Values: numbers, bars", "name": "ACCURACY_DISPLAY", "value": "bars"
   },
   { "info": "Morale display style in sidebar.", "default": "Default: vertical - Values: vertical, horizontal", "name": "MORALE_STYLE", "value": "vertical"
@@ -195,7 +197,7 @@
   },
   { "info": "Sets which video display will be used to show the game. Requires restart.", "default": "Default: 0: Surface Display", "name": "DISPLAY", "value": "0"
   },
-  { "info": "Starts Cataclysm in one of the fullscreen modes.  Requires restart.", "default": "Default: no - Values: no, fullscreen, windowedbl", "name": "FULLSCREEN", "value": "windowedbl"
+  { "info": "Starts Cataclysm in one of the fullscreen modes.  Requires restart.", "default": "Default: windowedbl - Values: no, fullscreen, windowedbl", "name": "FULLSCREEN", "value": "windowedbl"
   },
   { "info": "Set which renderer to use.  Requires restart.", "default": "Default: direct3d - Values: direct3d, direct3d11, opengl, opengles2, software", "name": "RENDERER", "value": "direct3d"
   },
@@ -217,7 +219,9 @@
   },
   { "info": "Maximum trait points available for character generation.", "default": "Default: 12 - Min: 0, Max: 1000", "name": "MAX_TRAIT_POINTS", "value": "20"
   },
-  { "info": "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "0.50"
+  { "info": "Scales experience gained from practicing skills.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "0.50"
+  },
+  { "info": "Scales experience gained from reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "BOOK_TRAINING_SPEED", "value": "5.00"
   },
   { "info": "Set the level of skill rust.  Vanilla: Vanilla Cataclysm - Capped: Capped at skill levels 2 - Int: Intelligence dependent - IntCap: Intelligence dependent, capped - Off: None at all.", "default": "Default: off - Values: vanilla, capped, int, intcap, off", "name": "SKILL_RUST", "value": "off"
   },
@@ -245,11 +249,11 @@
   },
   { "info": "Determines how much damage monsters can take.  A higher value makes monsters more resilient and a lower makes them more flimsy.  Requires world reset.", "default": "Default: 100 - Min: 1, Max: 1000", "name": "MONSTER_RESILIENCE", "value": "100%"
   },
-  { "info": "( WIP feature ) Determines terrain, shops, plants, and more.", "default": "Default: default - Values: default, desert_test", "name": "DEFAULT_REGION", "value": "default"
+  { "info": "( WIP feature ) Determines terrain, shops, plants, and more.", "default": "Default: default - Values: default", "name": "DEFAULT_REGION", "value": "default"
   },
   { "info": "Initial starting time of day on character generation.", "default": "Default: 8 - Min: 0, Max: 23", "name": "INITIAL_TIME", "value": "6"
   },
-  { "info": "How many days into the year the cataclysm occurred. Day 0 is Spring 1. Can be overridden by scenarios. This does not advance food rot or monster evolution.", "default": "Default: 0 - Min: 0, Max: 999", "name": "INITIAL_DAY", "value": "80"
+  { "info": "How many days into the year the cataclysm occurred. Day 0 is Spring 1. Can be overridden by scenarios. This does not advance food rot or monster evolution.", "default": "Default: 30 - Min: 0, Max: 999", "name": "INITIAL_DAY", "value": "80"
   },
   { "info": "How many days after the cataclysm the player spawns. Day 0 is the day of the cataclysm. Can be overridden by scenarios. Increasing this will cause food rot and monster evolution to advance.", "default": "Default: 0 - Min: 0, Max: 9999", "name": "SPAWN_DELAY", "value": "0"
   },
