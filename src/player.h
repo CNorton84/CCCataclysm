@@ -223,11 +223,6 @@ class player : public Character
         /** Returns what color the player should be drawn as */
         nc_color basic_symbol_color() const override;
 
-        /** Deserializes string data when loading files */
-        virtual void load_info( std::string data );
-        /** Outputs a serialized json string for saving */
-        virtual std::string save_info() const;
-
         /** Returns an enumeration of visible mutations with colors */
         std::string visible_mutations( const int visibility_cap ) const;
         std::vector<std::string> short_description_parts() const;
@@ -340,25 +335,38 @@ class player : public Character
                                       const skill_id &important_skill,
                                       const skill_id &least_important_skill,
                                       int skill_level = -1 );
+        /** Calculate non adjusted skill for (un)installing bionics */
+        int bionics_pl_skill( const skill_id &most_important_skill,
+                              const skill_id &important_skill,
+                              const skill_id &least_important_skill,
+                              int skill_level = -1 );
         /**Is the installation possible*/
         bool can_install_bionics( const itype &type, player &installer, bool autodoc = false,
                                   int skill_level = -1 );
-        /** Attempts to install bionics, returns false if the player cancels prior to installation */
+        /** Initialize all the values needed to start the operation player_activity */
         bool install_bionics( const itype &type, player &installer, bool autodoc = false,
                               int skill_level = -1 );
-        void bionics_install_failure( player &installer, int difficulty, int success,
+        /**Success or failure of installation happens here*/
+        void perform_install( bionic_id bid, bionic_id upbid, int difficulty, int success,
+                              int pl_skill,
+                              std::string cbm_name, std::string upcbm_name, std::string installer_name,
+                              std::vector<trait_id> trait_to_rem );
+        void bionics_install_failure( std::string installer, int difficulty, int success,
                                       float adjusted_skill );
         /**Is The uninstallation possible*/
         bool can_uninstall_bionic( const bionic_id &b_id, player &installer, bool autodoc = false,
                                    int skill_level = -1 );
-        /** Used by the player to perform surgery to remove bionics and possibly retrieve parts */
+        /** Initialize all the values needed to start the operation player_activity */
         bool uninstall_bionic( const bionic_id &b_id, player &installer, bool autodoc = false,
                                int skill_level = -1 );
+        /**Succes or failure of removal happens here*/
+        void perform_uninstall( bionic_id bid, int difficulty, int success, int power_lvl, int pl_skill,
+                                std::string cbm_name );
         /**Used by monster to perform surgery*/
         bool uninstall_bionic( const bionic &target_cbm, monster &installer, player &patient,
                                float adjusted_skill, bool autodoc = false );
         /**When a player fails the surgery*/
-        void bionics_uninstall_failure( player &installer, int difficulty, int success,
+        void bionics_uninstall_failure( int difficulty, int success,
                                         float adjusted_skill );
         /**When a monster fails the surgery*/
         void bionics_uninstall_failure( monster &installer, player &patient, int difficulty, int success,
@@ -797,8 +805,8 @@ class player : public Character
         void hurtall( int dam, Creature *source, bool disturb = true );
         /** Harms all body parts for dam, with armor reduction. If vary > 0 damage to parts are random within vary % (1-100) */
         int hitall( int dam, int vary, Creature *source );
-        /** Knocks the player back one square from a tile */
-        void knock_back_from( const tripoint &p ) override;
+        /** Knocks the player to a specified tile */
+        void knock_back_to( const tripoint &p ) override;
 
         /** Returns multiplier on fall damage at low velocity (knockback/pit/1 z-level, not 5 z-levels) */
         float fall_damage_mod() const override;
@@ -1155,7 +1163,7 @@ class player : public Character
 
     private:
         /** last time we checked for sleep */
-        time_point last_sleep_check = calendar::time_of_cataclysm;
+        time_point last_sleep_check = calendar::turn_zero;
         bool bio_soporific_powered_at_last_sleep_check;
 
     public:

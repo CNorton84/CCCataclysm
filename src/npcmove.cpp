@@ -80,6 +80,7 @@ const efftype_id effect_hit_by_player( "hit_by_player" );
 const efftype_id effect_infected( "infected" );
 const efftype_id effect_infection( "infection" );
 const efftype_id effect_lying_down( "lying_down" );
+const efftype_id effect_under_op( "under_operation" );
 const efftype_id effect_no_sight( "no_sight" );
 const efftype_id effect_stunned( "stunned" );
 const efftype_id effect_onfire( "onfire" );
@@ -313,7 +314,7 @@ std::vector<sphere> npc::find_dangerous_explosives() const
 {
     std::vector<sphere> result;
 
-    const auto active_items = g->m.get_active_items_in_radius( pos(), MAX_VIEW_DISTANCE );
+    const auto active_items = g->m.get_active_items_in_radius( pos(), MAX_VIEW_DISTANCE, "explosives" );
 
     for( const auto &elem : active_items ) {
         const auto use = elem->type->get_use( "explosion" );
@@ -662,6 +663,11 @@ void npc::move()
     }
     regen_ai_cache();
     adjust_power_cbms();
+
+    if( has_effect( effect_under_op ) ) {
+        execute_action( npc_player_activity );
+        return;// NPCs under operation should just stay still
+    }
 
     npc_action action = npc_undecided;
 
@@ -2572,8 +2578,7 @@ void npc::find_item()
     const auto consider_terrain =
     [ this, whitelisting, volume_allowed, &wanted, &wanted_name ]( const tripoint & p ) {
         // We only want to pick plants when there are no items to pick
-        if( !whitelisting || wanted != nullptr || !wanted_name.empty() ||
-            volume_allowed < units::from_milliliter( 250 ) ) {
+        if( !whitelisting || wanted != nullptr || !wanted_name.empty() || volume_allowed < 250_ml ) {
             return;
         }
 
@@ -2965,7 +2970,7 @@ bool npc::find_corpse_to_pulp()
     if( corpse == nullptr ) {
         // If we're following the player, don't wander off to pulp corpses
         const tripoint &around = is_walking_with() ? g->u.pos() : pos();
-        for( const item_location &location : g->m.get_active_items_in_radius( around, range ) ) {
+        for( const item_location &location : g->m.get_active_items_in_radius( around, range, "corpse" ) ) {
             corpse = check_tile( location.position() );
 
             if( corpse != nullptr ) {

@@ -142,6 +142,7 @@ const efftype_id effect_slimed( "slimed" );
 const efftype_id effect_stunned( "stunned" );
 const efftype_id effect_targeted( "targeted" );
 const efftype_id effect_teleglow( "teleglow" );
+const efftype_id effect_under_op( "under_operation" );
 
 static const trait_id trait_ACIDBLOOD( "ACIDBLOOD" );
 static const trait_id trait_MARLOSS_BLUE( "MARLOSS_BLUE" );
@@ -159,12 +160,9 @@ static bool within_visual_range( monster *z, int max_range )
 
 static bool within_target_range( const monster *const z, const Creature *const target, int range )
 {
-    if( target == nullptr ||
-        rl_dist( z->pos(), target->pos() ) > range ||
-        !z->sees( *target ) ) {
-        return false;
-    }
-    return true;
+    return target != nullptr &&
+           rl_dist( z->pos(), target->pos() ) <= range &&
+           z->sees( *target );
 }
 
 static Creature *sting_get_target( monster *z, float range = 5.0f )
@@ -923,12 +921,9 @@ bool mattack::resurrect( monster *z )
         // Check to see if there are any nearby living zombies to see if we should get angry
         const bool allies = g->get_creature_if( [&]( const Creature & critter ) {
             const monster *const zed = dynamic_cast<const monster *>( &critter );
-            if( zed && zed != z && zed->type->has_flag( MF_REVIVES ) && zed->type->in_species( ZOMBIE ) &&
-                z->attitude_to( *zed ) == Creature::Attitude::A_FRIENDLY  &&
-                within_target_range( z, zed, 10 ) ) {
-                return true;
-            }
-            return false;
+            return zed && zed != z && zed->type->has_flag( MF_REVIVES ) && zed->type->in_species( ZOMBIE ) &&
+                   z->attitude_to( *zed ) == Creature::Attitude::A_FRIENDLY  &&
+                   within_target_range( z, zed, 10 );
         } );
         if( !allies ) {
             // Nobody around who we could revive, get angry
@@ -2137,6 +2132,13 @@ bool mattack::dermatik_growth( monster *z )
     return false;
 }
 
+bool mattack::fungal_trail( monster *z )
+{
+    fungal_effects fe( *g, g->m );
+    fe.spread_fungus( z->pos() );
+    return false;
+}
+
 bool mattack::plant( monster *z )
 {
     fungal_effects fe( *g, g->m );
@@ -2624,6 +2626,13 @@ bool mattack::grab_drag( monster *z )
     Creature *target = z->attack_target();
     monster *zz = dynamic_cast<monster *>( target );
     if( target == nullptr || rl_dist( z->pos(), target->pos() ) > 1 ) {
+        return false;
+    }
+
+    if( target->has_effect( effect_under_op ) ) {
+        target->add_msg_player_or_npc( m_good,
+                                       _( "The %s tries to drag you, but you're securely fastened in the autodoc." ),
+                                       _( "The %s tries to drag <npcname>, but they're securely fastened in the autodoc." ), z->name() );
         return false;
     }
 

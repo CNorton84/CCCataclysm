@@ -127,8 +127,7 @@ inline void proc_weather_sum( const weather_type wtype, weather_sum &data,
     }
 
     // TODO: Change this sunlight "sampling" here into a proper interpolation
-    const float tick_sunlight = calendar( to_turn<int>( t ) ).sunlight() + weather::light_modifier(
-                                    wtype );
+    const float tick_sunlight = sunlight( t ) + weather::light_modifier( wtype );
     data.sunlight += std::max<float>( 0.0f, to_turns<int>( tick_size ) * tick_sunlight );
 }
 
@@ -617,7 +616,7 @@ std::string weather_forecast( const point &abs_sm_pos )
     double low = 100.0;
     const tripoint abs_ms_pos = tripoint( sm_to_ms_copy( abs_sm_pos ), 0 );
     // TODO: wind direction and speed
-    const time_point last_hour = calendar::turn - ( calendar::turn - calendar::time_of_cataclysm ) %
+    const time_point last_hour = calendar::turn - ( calendar::turn - calendar::turn_zero ) %
                                  1_hours;
     for( int d = 0; d < 6; d++ ) {
         weather_type forecast = WEATHER_NULL;
@@ -631,7 +630,7 @@ std::string weather_forecast( const point &abs_sm_pos )
         std::string day;
         bool started_at_night;
         const time_point c = last_hour + 12_hours * d;
-        if( d == 0 && calendar( to_turn<int>( c ) ).is_night() ) {
+        if( d == 0 && is_night( c ) ) {
             day = _( "Tonight" );
             started_at_night = true;
         } else {
@@ -770,21 +769,21 @@ std::string get_shortdirstring( int angle )
     std::string dirstring;
     int dirangle = angle;
     if( dirangle <= 23 || dirangle > 338 ) {
-        dirstring = "N";
+        dirstring = _( "N" );
     } else if( dirangle <= 68 && dirangle > 23 ) {
-        dirstring = "NE";
+        dirstring = _( "NE" );
     } else if( dirangle <= 113 && dirangle > 68 ) {
-        dirstring = "E";
+        dirstring = _( "E" );
     } else if( dirangle <= 158 && dirangle > 113 ) {
-        dirstring = "SE";
+        dirstring = _( "SE" );
     } else if( dirangle <= 203 && dirangle > 158 ) {
-        dirstring = "S";
+        dirstring = _( "S" );
     } else if( dirangle <= 248 && dirangle > 203 ) {
-        dirstring = "SW";
+        dirstring = _( "SW" );
     } else if( dirangle <= 293 && dirangle > 248 ) {
-        dirstring = "W";
+        dirstring = _( "W" );
     } else if( dirangle <= 338 && dirangle > 293 ) {
-        dirstring = "NW";
+        dirstring = _( "NW" );
     }
     return dirstring;
 }
@@ -795,21 +794,21 @@ std::string get_dirstring( int angle )
     std::string dirstring;
     int dirangle = angle;
     if( dirangle <= 23 || dirangle > 338 ) {
-        dirstring = "North";
+        dirstring = _( "North" );
     } else if( dirangle <= 68 && dirangle > 23 ) {
-        dirstring = "North-East";
+        dirstring = _( "North-East" );
     } else if( dirangle <= 113 && dirangle > 68 ) {
-        dirstring = "East";
+        dirstring = _( "East" );
     } else if( dirangle <= 158 && dirangle > 113 ) {
-        dirstring = "South-East";
+        dirstring = _( "South-East" );
     } else if( dirangle <= 203 && dirangle > 158 ) {
-        dirstring = "South";
+        dirstring = _( "South" );
     } else if( dirangle <= 248 && dirangle > 203 ) {
-        dirstring = "South-West";
+        dirstring = _( "South-West" );
     } else if( dirangle <= 293 && dirangle > 248 ) {
-        dirstring = "West";
+        dirstring = _( "West" );
     } else if( dirangle <= 338 && dirangle > 293 ) {
-        dirstring = "North-West";
+        dirstring = _( "North-West" );
     }
     return dirstring;
 }
@@ -977,7 +976,7 @@ void weather_manager::update_weather()
         weather = weather_override == WEATHER_NULL ?
                   weather_gen.get_weather_conditions( w )
                   : weather_override;
-        if( weather == WEATHER_SUNNY && calendar::turn.is_night() ) {
+        if( weather == WEATHER_SUNNY && is_night( calendar::turn ) ) {
             weather = WEATHER_CLEAR;
         }
         sfx::do_ambient();

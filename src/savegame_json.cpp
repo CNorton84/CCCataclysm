@@ -331,8 +331,7 @@ void SkillLevel::deserialize( JsonIn &jsin )
     data.read( "exercise", _exercise );
     data.read( "istraining", _isTraining );
     if( !data.read( "lastpracticed", _lastPracticed ) ) {
-        // TODO: shouldn't that be calendar::start?
-        _lastPracticed = calendar::time_of_cataclysm + time_duration::from_hours(
+        _lastPracticed = calendar::start_of_cataclysm + time_duration::from_hours(
                              get_option<int>( "INITIAL_TIME" ) );
     }
     data.read( "highestlevel", _highestLevel );
@@ -495,6 +494,8 @@ void Character::load( JsonObject &data )
     on_stat_change( "hunger", hunger );
     on_stat_change( "fatigue", fatigue );
     on_stat_change( "sleep_deprivation", sleep_deprivation );
+    recalc_sight_limits();
+    reset_encumbrance();
 
     // FIXME: Fix corrupted bionic power data loading (see #31627). Temporary.
     power_level = pmap.get_int( "power_level", data.get_int( "power_level", 0 ) );
@@ -1817,8 +1818,8 @@ void monster::load( JsonObject &data )
     if( !data.read( "last_updated", last_updated ) ) {
         last_updated = calendar::turn;
     }
-    last_baby = data.get_int( "last_baby", calendar::turn );
-    last_biosig = data.get_int( "last_biosig", calendar::turn );
+    last_baby = data.get_int( "last_baby", to_turn<int>( calendar::turn ) );
+    last_biosig = data.get_int( "last_biosig", to_turn<int>( calendar::turn ) );
 
     data.read( "path", path );
 }
@@ -1916,6 +1917,22 @@ void time_duration::deserialize( JsonIn &jsin )
     }
 }
 
+template<typename V, typename U>
+void units::quantity<V, U>::serialize( JsonOut &jsout ) const
+{
+    jsout.write( value_ );
+}
+
+// TODO: BATTERIES this template specialization should be in the global namespace - see GCC bug 56480
+namespace units
+{
+template<>
+void units::energy::deserialize( JsonIn &jsin )
+{
+    *this = from_millijoule( jsin.get_int() );
+}
+} // namespace units
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///// item.h
 
@@ -1957,6 +1974,8 @@ void item::io( Archive &archive )
     archive.io( "charges", charges, 0 );
     charges = std::max( charges, 0 );
 
+    archive.io( "energy", energy, 0_mJ );
+
     int cur_phase = static_cast<int>( current_phase );
     archive.io( "burnt", burnt, 0 );
     archive.io( "poison", poison, 0 );
@@ -1964,7 +1983,7 @@ void item::io( Archive &archive )
     archive.io( "note", note, 0 );
     // NB! field is named `irridation` in legacy files
     archive.io( "irridation", irradiation, 0 );
-    archive.io( "bday", bday, calendar::time_of_cataclysm );
+    archive.io( "bday", bday, calendar::turn_zero );
     archive.io( "mission_id", mission_id, -1 );
     archive.io( "player_id", player_id, -1 );
     archive.io( "item_vars", item_vars, io::empty_default_tag() );
@@ -1975,8 +1994,8 @@ void item::io( Archive &archive )
     archive.io( "is_favorite", is_favorite, false );
     archive.io( "item_counter", item_counter, static_cast<decltype( item_counter )>( 0 ) );
     archive.io( "rot", rot, 0_turns );
-    archive.io( "last_rot_check", last_rot_check, calendar::time_of_cataclysm );
-    archive.io( "last_temp_check", last_temp_check, calendar::time_of_cataclysm );
+    archive.io( "last_rot_check", last_rot_check, calendar::turn_zero );
+    archive.io( "last_temp_check", last_temp_check, calendar::turn_zero );
     archive.io( "current_phase", cur_phase, static_cast<int>( type->phase ) );
     archive.io( "techniques", techniques, io::empty_default_tag() );
     archive.io( "faults", faults, io::empty_default_tag() );
@@ -2093,6 +2112,35 @@ void item::io( Archive &archive )
     // Activate corpses from old saves
     if( is_corpse() && !active ) {
         active = true;
+    }
+
+    if( charges != 0 && !type->can_have_charges() ) {
+        // Types that are known to have charges, but should not have them.
+        // We fix it here, but it's expected from bugged saves and does not require a message.
+        static const std::set<itype_id> known_bad_types = { {
+                itype_id( "chitin_piece" ), // from butchering (code supplied count as 3. parameter to item constructor).
+                itype_id( "laptop" ), // a monster-death-drop item group had this listed with random charges
+                itype_id( "usb_drive" ), // same as laptop
+                itype_id( "pipe" ), // similar as above, but in terrain bash result
+
+                itype_id( "light_disposable_cell" ), // those were created with charges via item groups, which is desired,
+                itype_id( "small_storage_battery" ), // but item_groups.cpp should create battery charges instead of
+                itype_id( "heavy_disposable_cell" ), // charges of the container item.
+                itype_id( "medium_battery_cell" ),
+                itype_id( "medium_plus_battery_cell" ),
+                itype_id( "medium_minus_battery_cell" ),
+                itype_id( "heavy_plus_battery_cell" ),
+                itype_id( "heavy_minus_battery_cell" ),
+                itype_id( "heavy_battery_cell" ),
+                itype_id( "light_battery_cell" ),
+                itype_id( "light_plus_battery_cell" ),
+                itype_id( "light_minus_battery_cell" ),
+            }
+        };
+        if( known_bad_types.count( type->get_id() ) == 0 ) {
+            debugmsg( "Item %s was loaded with charges, but can not have any!", type->get_id() );
+        }
+        charges = 0;
     }
 }
 
@@ -2379,8 +2427,8 @@ void vehicle::deserialize( JsonIn &jsin )
     int mdir = 0;
 
     data.read( "type", type );
-    data.read( "posx", posx );
-    data.read( "posy", posy );
+    data.read( "posx", pos.x );
+    data.read( "posy", pos.y );
     data.read( "om_id", om_id );
     data.read( "faceDir", fdir );
     data.read( "moveDir", mdir );
@@ -2511,8 +2559,8 @@ void vehicle::serialize( JsonOut &json ) const
 {
     json.start_object();
     json.member( "type", type );
-    json.member( "posx", posx );
-    json.member( "posy", posy );
+    json.member( "posx", pos.x );
+    json.member( "posy", pos.y );
     json.member( "om_id", om_id );
     json.member( "faceDir", face.dir() );
     json.member( "moveDir", move.dir() );
