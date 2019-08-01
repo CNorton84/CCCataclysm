@@ -211,8 +211,8 @@ void SkillLevel::practice()
 
 void SkillLevel::readBook( int minimumGain, int maximumGain, int maximumLevel )
 {
-    minimumGain = minimumGain / get_option<float>("SKILL_TRAINING_SPEED");
-    maximumGain = maximumGain / get_option<float>("SKILL_TRAINING_SPEED");
+    minimumGain = minimumGain * get_option<float>("BOOK_TRAINING_SPEED");
+    maximumGain = maximumGain * get_option<float>("BOOK_TRAINING_SPEED");
     if( _level < maximumLevel || maximumLevel < 0 ) {
         train( ( _level + 1 ) * rng( minimumGain, maximumGain ) );
     }
