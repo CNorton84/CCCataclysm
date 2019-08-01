@@ -358,13 +358,6 @@ void game::save_shortcuts( std::ostream &fout )
 
 std::unordered_set<std::string> obsolete_terrains;
 
-void overmap::load_obsolete_terrains( JsonObject &jo )
-{
-    JsonArray ja = jo.get_array( "terrains" );
-    while( ja.has_more() ) {
-        obsolete_terrains.emplace( ja.next_string() );
-    }
-}
 
 bool overmap::obsolete_terrain( const std::string &ter )
 {
