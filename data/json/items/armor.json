@@ -665,11 +665,11 @@
     "material": [ "plastic", "cotton" ],
     "symbol": "[",
     "color": "light_gray",
-    "covers": [ "TORSO", "ARMS" ],
-    "coverage": 70,
+    "covers": [ "TORSO", "ARMS", "LEGS" ],
+    "coverage": 100,
     "encumbrance": 10,
     "warmth": 10,
-    "material_thickness": 5,
+    "material_thickness": 6,
     "flags": [ "STURDY", "OUTER" ]
   },
   {
