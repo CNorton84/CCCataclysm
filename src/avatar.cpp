@@ -571,7 +571,7 @@ int avatar::time_to_read( const item &book, const player &reader, const player *
     if( !has_identified( book.typeId() ) ) {
         retval /= 10; //skimming
     }
-    return retval * 5;
+    return retval;
 }
 
 /**
