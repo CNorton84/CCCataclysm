@@ -23,7 +23,7 @@
   },
   { "info": "If false, will cause player to drop new items that cause them to exceed the weight limit.", "default": "Default: False", "name": "DANGEROUS_PICKUPS", "value": "false"
   },
-  { "info": "If true, will hold the game and display a warning if a hostile monster/npc is approaching.", "default": "Default: True", "name": "SAFEMODE", "value": "false"
+  { "info": "If true, will hold the game and display a warning if a hostile monster/npc is approaching.", "default": "Default: True", "name": "SAFEMODE", "value": "true"
   },
   { "info": "If safe mode is enabled, distance to hostiles at which safe mode should show a warning.  0 = Max player view distance.", "default": "Default: 0 - Min: 0, Max: 60", "name": "SAFEMODEPROXIMITY", "value": "10"
   },
@@ -219,9 +219,11 @@
   },
   { "info": "Maximum trait points available for character generation.", "default": "Default: 12 - Min: 0, Max: 1000", "name": "MAX_TRAIT_POINTS", "value": "20"
   },
-  { "info": "Scales experience gained from practicing skills.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "0.50"
+  { "info": "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "0.10"
   },
-  { "info": "Scales experience gained from reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "BOOK_TRAINING_SPEED", "value": "5.00"
+  { "info": "Scales experience gained from reading books.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "BOOK_TRAINING_SPEED", "value": "4.50"
+  },
+  { "info": "Scales experience gained for combat skills.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "COMBAT_TRAINING_SPEED", "value": "10.00"
   },
   { "info": "Set the level of skill rust.  Vanilla: Vanilla Cataclysm - Capped: Capped at skill levels 2 - Int: Intelligence dependent - IntCap: Intelligence dependent, capped - Off: None at all.", "default": "Default: off - Values: vanilla, capped, int, intcap, off", "name": "SKILL_RUST", "value": "off"
   },
@@ -249,7 +251,7 @@
   },
   { "info": "Determines how much damage monsters can take.  A higher value makes monsters more resilient and a lower makes them more flimsy.  Requires world reset.", "default": "Default: 100 - Min: 1, Max: 1000", "name": "MONSTER_RESILIENCE", "value": "100%"
   },
-  { "info": "( WIP feature ) Determines terrain, shops, plants, and more.", "default": "Default: default - Values: default", "name": "DEFAULT_REGION", "value": "default"
+  { "info": "( WIP feature ) Determines terrain, shops, plants, and more.", "default": "Default: default - Values: default, desert_test", "name": "DEFAULT_REGION", "value": "default"
   },
   { "info": "Initial starting time of day on character generation.", "default": "Default: 8 - Min: 0, Max: 23", "name": "INITIAL_TIME", "value": "6"
   },
