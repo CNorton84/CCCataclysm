@@ -1493,6 +1493,12 @@ bool overmap::generate_sub( const int z )
             //oter_id oter_sewer = ter(i, j, -1);
             //oter_id oter_underground = ter(i, j, -2);
 
+            if( is_ot_match( "microlab_sub_connector", ter( p ), ot_match_type::type ) ) {
+                om_direction::type rotation = ter( p )->get_dir();
+                ter( p ) = oter_id( "subway_end_north" )->get_rotated( rotation );;
+                subway_points.emplace_back( p.xy() );
+            }
+
             // implicitly skip skip_above oter_ids
             bool skipme = false;
             for( auto &elem : skip_above ) {
@@ -4174,8 +4180,8 @@ void overmap::place_radios()
                 int choice = rng( 0, 2 );
                 switch( choice ) {
                     case 0:
-                        message = string_format( _( "This is emergency broadcast station %d%d.\
-  Please proceed quickly and calmly to your designated evacuation point." ), i, j );
+                        message = string_format( _( "This is emergency broadcast station %d%d."
+                                                    "  Please proceed quickly and calmly to your designated evacuation point." ), i, j );
                         radios.push_back( radio_tower( pos_sm, strength(), message ) );
                         break;
                     case 1:
@@ -4187,13 +4193,13 @@ void overmap::place_radios()
                         break;
                 }
             } else if( ter( pos_omt ) == "lmoe" ) {
-                message = string_format( _( "This is automated emergency shelter beacon %d%d.\
-  Supplies, amenities and shelter are stocked." ), i, j );
+                message = string_format( _( "This is automated emergency shelter beacon %d%d."
+                                            "  Supplies, amenities and shelter are stocked." ), i, j );
                 radios.push_back( radio_tower( pos_sm, strength() / 2, message ) );
             } else if( ter( pos_omt ) == "fema_entrance" ) {
-                message = string_format( _( "This is FEMA camp %d%d.\
-  Supplies are limited, please bring supplemental food, water, and bedding.\
-  This is FEMA camp %d%d.  A designated long-term emergency shelter." ), i, j, i, j );
+                message = string_format( _( "This is FEMA camp %d%d."
+                                            "  Supplies are limited, please bring supplemental food, water, and bedding."
+                                            "  This is FEMA camp %d%d.  A designated long-term emergency shelter." ), i, j, i, j );
                 radios.push_back( radio_tower( pos_sm, strength(), message ) );
             }
         }

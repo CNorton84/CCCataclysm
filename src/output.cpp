@@ -394,14 +394,15 @@ void center_print( const catacurses::window &w, const int y, const nc_color &FG,
                    const std::string &text )
 {
     int window_width = getmaxx( w );
-    int string_width = utf8_width( text );
+    int string_width = utf8_width( text, true );
     int x;
     if( string_width >= window_width ) {
         x = 0;
     } else {
         x = ( window_width - string_width ) / 2;
     }
-    mvwprintz( w, point( x, y ), FG, text );
+    const int available_width = std::max( 1, window_width - x );
+    trim_and_print( w, point( x, y ), available_width, FG, text );
 }
 
 int right_print( const catacurses::window &w, const int line, const int right_indent,
@@ -715,22 +716,22 @@ void draw_item_filter_rules( const catacurses::window &win, int starty, int heig
 
     starty += fold_and_print( win, point( 1, starty ), len, c_white,
                               _( "Separate multiple items with ," ) );
-    //~ An example of how to separate multiple items with a comma when filtering items.
     starty += 1 + fold_and_print( win, point( 1, starty ), len, c_white,
+                                  //~ An example of how to separate multiple items with a comma when filtering items.
                                   _( "Example: back,flash,aid, ,band" ) );
 
     if( type == item_filter_type::FILTER ) {
         starty += fold_and_print( win, point( 1, starty ), len, c_white,
                                   _( "To exclude items, place - in front." ) );
-        //~ An example of how to exclude items with - when filtering items.
         starty += 1 + fold_and_print( win, point( 1, starty ), len, c_white,
+                                      //~ An example of how to exclude items with - when filtering items.
                                       _( "Example: -pipe,-chunk,-steel" ) );
     }
 
     starty += fold_and_print( win, point( 1, starty ), len, c_white,
                               _( "Search [c]ategory, [m]aterial, [q]uality or [d]isassembled components:" ) );
-    //~ An example of how to filter items based on category or material.
     fold_and_print( win, point( 1, starty ), len, c_white,
+                    //~ An example of how to filter items based on category or material.
                     _( "Examples: c:food,m:iron,q:hammering,d:pipe" ) );
     wrefresh( win );
 }
