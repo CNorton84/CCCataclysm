@@ -183,6 +183,8 @@
   },
   { "info": "Choose the tileset you want to use.", "default": "Default: MSX++DEAD_PEOPLE - Values: ASCIITiles, ChestHole16, ChestHole32, ChestHole_iso, ChestHole, HitButton_iso, hoder, MSX++DEAD_PEOPLE, MShock24Modded, MShock32Modded, MshockXottoplus, retrodays", "name": "TILES", "value": "MSX++DEAD_PEOPLE"
   },
+  { "info": "Specified the mode in which the memory map is drawn.  Requires restart.", "default": "Default: color_pixel_sepia - Values: color_pixel_darken, color_pixel_sepia", "name": "MEMORY_MAP_MODE", "value": "color_pixel_darken"
+  },
   { "info": "If true, shows the pixel-detail minimap in game after the save is loaded.  Use the 'Toggle Pixel Minimap' action key to change its visibility during gameplay.", "default": "Default: True", "name": "PIXEL_MINIMAP", "value": "true"
   },
   { "info": "Specified the mode in which the minimap drawn.", "default": "Default: dots - Values: solid, squares, dots", "name": "PIXEL_MINIMAP_MODE", "value": "solid"
@@ -191,9 +193,13 @@
   },
   { "info": "Height of pixel-detail minimap, measured in terminal rows.  Set to 0 for default spacing.", "default": "Default: 0 - Min: 0, Max: 100", "name": "PIXEL_MINIMAP_HEIGHT", "value": "0"
   },
+  { "info": "Scale pixel minimap to fit its surroundings.  May produce crappy results, especially in modes other than \"Solid\".", "default": "Default: False", "name": "PIXEL_MINIMAP_SCALE_TO_FIT", "value": "false"
+  },
   { "info": "Preserves the square shape of tiles shown on the pixel minimap.", "default": "Default: True", "name": "PIXEL_MINIMAP_RATIO", "value": "true"
   },
-  { "info": "Controls how fast the enemy beacons blink on the pixel minimap.  Value is multiplied by 200 ms.  Set to 0 to disable.", "default": "Default: 10 - Min: 0, Max: 50", "name": "PIXEL_MINIMAP_BLINK", "value": "5"
+  { "info": "Controls how big the creature beacons are.  Value is in minimap tiles.", "default": "Default: 2 - Min: 1, Max: 4", "name": "PIXEL_MINIMAP_BEACON_SIZE", "value": "2"
+  },
+  { "info": "Controls how fast the hostile creature beacons blink on the pixel minimap.  Value is multiplied by 200 ms.  Set to 0 to disable.", "default": "Default: 10 - Min: 0, Max: 50", "name": "PIXEL_MINIMAP_BLINK", "value": "5"
   },
   { "info": "Sets which video display will be used to show the game. Requires restart.", "default": "Default: 0: Surface Display", "name": "DISPLAY", "value": "0"
   },
