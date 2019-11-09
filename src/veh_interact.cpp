@@ -120,9 +120,6 @@ player_activity veh_interact::serialize_activity()
         case 'o':
             time = vp->removal_time( g->u );
             break;
-        case 'c':
-            time = vp->removal_time( g->u ) + vp->install_time( g->u );
-            break;
     }
     if( g->u.has_trait( trait_id( "DEBUG_HS" ) ) ) {
         time = 1;
@@ -209,7 +206,6 @@ veh_interact::veh_interact( vehicle &veh, const point &p )
     main_context.register_action( "RENAME" );
     main_context.register_action( "SIPHON" );
     main_context.register_action( "UNLOAD" );
-    main_context.register_action( "TIRE_CHANGE" );
     main_context.register_action( "ASSIGN_CREW" );
     main_context.register_action( "RELABEL" );
     main_context.register_action( "PREV_TAB" );
@@ -325,6 +321,12 @@ void veh_interact::do_main_loop()
 {
     bool finish = false;
     const bool owned_by_player = veh->handle_potential_theft( dynamic_cast<player &>( g->u ), true );
+    faction *owner_fac;
+    if( veh->has_owner() ) {
+        owner_fac = g->faction_manager_ptr->get( veh->get_owner() );
+    } else {
+        owner_fac = g->faction_manager_ptr->get( faction_id( "no_faction" ) );
+    }
     while( !finish ) {
         overview();
         display_mode();
@@ -371,7 +373,9 @@ void veh_interact::do_main_loop()
             if( owned_by_player ) {
                 redraw = do_rename( msg );
             } else {
-                popup( _( "You cannot rename this vehicle as it is owned by: %s." ), _( veh->get_owner()->name ) );
+                if( owner_fac ) {
+                    popup( _( "You cannot rename this vehicle as it is owned by: %s." ), _( owner_fac->name ) );
+                }
                 redraw = true;
             }
         } else if( action == "SIPHON" ) {
@@ -394,25 +398,23 @@ void veh_interact::do_main_loop()
             } else {
                 redraw = true;
             }
-        } else if( action == "TIRE_CHANGE" ) {
-            if( veh->handle_potential_theft( dynamic_cast<player &>( g->u ) ) ) {
-                redraw = do_tirechange( msg );
-            } else {
-                redraw = true;
-            }
         } else if( action == "ASSIGN_CREW" ) {
             if( owned_by_player ) {
                 redraw = do_assign_crew( msg );
             } else {
-                popup( _( "You cannot assign crew on this vehicle as it is owned by: %s." ),
-                       _( veh->get_owner()->name ) );
+                if( owner_fac ) {
+                    popup( _( "You cannot assign crew on this vehicle as it is owned by: %s." ),
+                           _( owner_fac->name ) );
+                }
                 redraw = true;
             }
         } else if( action == "RELABEL" ) {
             if( owned_by_player ) {
                 redraw = do_relabel( msg );
             } else {
-                popup( _( "You cannot relabel this vehicle as it is owned by: %s." ), _( veh->get_owner()->name ) );
+                if( owner_fac ) {
+                    popup( _( "You cannot relabel this vehicle as it is owned by: %s." ), _( owner_fac->name ) );
+                }
                 redraw = true;
             }
         } else if( action == "FUEL_LIST_DOWN" ) {
@@ -454,12 +456,6 @@ void veh_interact::cache_tool_availability()
 {
     crafting_inv = g->u.crafting_inventory();
 
-    has_wrench = crafting_inv.has_quality( quality_id( "WRENCH" ) );
-
-    has_wheel = crafting_inv.has_components( "any", 1, []( const item & it ) {
-        return !!item::find_type( it.typeId() )->wheel;
-    } );
-
     cache_tool_availability_update_lifting( g->u.pos() );
     int mech_jack = 0;
     if( g->u.is_mounted() ) {
@@ -469,12 +465,6 @@ void veh_interact::cache_tool_availability()
                            map_selector( g->u.pos(), PICKUP_RANGE ).max_quality( JACK ),
                            vehicle_selector( g->u.pos(), 2, true, *veh ).max_quality( JACK )
                          } );
-
-    const double qual = jack_quality( *veh );
-
-    has_jack = g->u.has_quality( JACK, qual ) ||
-               map_selector( g->u.pos(), PICKUP_RANGE ).has_quality( JACK, qual ) ||
-               vehicle_selector( g->u.pos(), 2, true, *veh ).has_quality( JACK,  qual ) || mech_jack >= qual;
 }
 
 void veh_interact::cache_tool_availability_update_lifting( const tripoint &world_cursor_pos )
@@ -537,7 +527,9 @@ task_reason veh_interact::cant_do( char mode )
         break;
 
         case 'f':
-            return std::any_of( veh->parts.begin(), veh->parts.end(), can_refill ) ? CAN_DO : INVALID_TARGET;
+            valid_target = std::any_of( veh->parts.begin(), veh->parts.end(), can_refill );
+            has_tools = true;
+            break;
 
         case 'o': // remove mode
             enough_morale = g->u.has_morale_to_craft();
@@ -774,7 +766,7 @@ bool veh_interact::can_install_part()
                           colorize( aid_string, aid_color ),
                           colorize( str_string, str_color ) ) << "\n";
 
-    sel_vpart_info->format_description( msg, "<color_light_gray>", getmaxx( w_msg ) - 4 );
+    sel_vpart_info->format_description( msg, c_light_gray, getmaxx( w_msg ) - 4 );
 
     werase( w_msg );
     // NOLINTNEXTLINE(cata-use-named-point-constants)
@@ -870,6 +862,7 @@ bool veh_interact::do_install( std::string &msg )
                part.has_flag( "FORGE" ) ||
                part.has_flag( "HORN" ) ||
                part.has_flag( "BEEPER" ) ||
+               part.has_flag( "AUTOPILOT" ) ||
                part.has_flag( "WATCH" ) ||
                part.has_flag( "ALARMCLOCK" ) ||
                part.has_flag( VPFLAG_RECHARGE ) ||
@@ -971,10 +964,10 @@ bool veh_interact::do_install( std::string &msg )
             if( can_install ) {
                 switch( reason ) {
                     case LOW_MORALE:
-                        msg = _( "Your morale is too low to construct..." );
+                        msg = _( "Your morale is too low to construct…" );
                         return false;
                     case LOW_LIGHT:
-                        msg = _( "It's too dark to see what you are doing..." );
+                        msg = _( "It's too dark to see what you are doing…" );
                         return false;
                     case MOVING_VEHICLE:
                         msg = _( "You can't install parts while driving." );
@@ -983,7 +976,7 @@ bool veh_interact::do_install( std::string &msg )
                         break;
                 }
                 if( veh->is_foldable() && !sel_vpart_info->has_flag( "FOLDABLE" ) &&
-                    !query_yn( _( "Installing this part will make the vehicle unfoldable. Continue?" ) ) ) {
+                    !query_yn( _( "Installing this part will make the vehicle unfoldable.  Continue?" ) ) ) {
                     return true;
                 }
                 const auto &shapes = vpart_shapes[ sel_vpart_info->name() + sel_vpart_info->item ];
@@ -1083,10 +1076,10 @@ bool veh_interact::do_repair( std::string &msg )
     auto can_repair = [&msg, &reason]() {
         switch( reason ) {
             case LOW_MORALE:
-                msg = _( "Your morale is too low to repair..." );
+                msg = _( "Your morale is too low to repair…" );
                 return false;
             case LOW_LIGHT:
-                msg = _( "It's too dark to see what you are doing..." );
+                msg = _( "It's too dark to see what you are doing…" );
                 return false;
             case MOVING_VEHICLE:
                 msg = _( "You can't repair stuff while driving." );
@@ -1126,8 +1119,7 @@ bool veh_interact::do_repair( std::string &msg )
             }
         }
 
-        std::string desc_color = string_format( "<color_%1$s>",
-                                                string_from_color( pt.is_broken() ? c_dark_gray : c_light_gray ) );
+        const nc_color desc_color = pt.is_broken() ? c_dark_gray : c_light_gray;
         vp.format_description( nmsg, desc_color, getmaxx( w_msg ) - 4 );
 
         werase( w_msg );
@@ -1150,7 +1142,7 @@ bool veh_interact::do_repair( std::string &msg )
             sel_vpart_info = &vp;
             const std::vector<npc *> helpers = g->u.get_crafting_helpers();
             for( const npc *np : helpers ) {
-                add_msg( m_info, _( "%s helps with this task..." ), np->name );
+                add_msg( m_info, _( "%s helps with this task…" ), np->name );
             }
             sel_cmd = 'r';
             break;
@@ -1175,10 +1167,10 @@ bool veh_interact::do_mend( std::string &msg )
 {
     switch( cant_do( 'm' ) ) {
         case LOW_MORALE:
-            msg = _( "Your morale is too low to mend..." );
+            msg = _( "Your morale is too low to mend…" );
             return false;
         case LOW_LIGHT:
-            msg = _( "It's too dark to see what you are doing..." );
+            msg = _( "It's too dark to see what you are doing…" );
             return false;
         case INVALID_TARGET:
             msg = _( "No faulty parts require mending." );
@@ -1212,9 +1204,17 @@ bool veh_interact::do_mend( std::string &msg )
 
 bool veh_interact::do_refill( std::string &msg )
 {
-    if( cant_do( 'f' ) ) {
-        msg = _( "No parts can currently be refilled" );
-        return false;
+    switch( cant_do( 'f' ) ) {
+        case MOVING_VEHICLE:
+            msg = _( "You can't refill a moving vehicle." );
+            return false;
+
+        case INVALID_TARGET:
+            msg = _( "No parts can currently be refilled." );
+            return false;
+
+        default:
+            break;
     }
 
     set_title( _( "Select part to refill:" ) );
@@ -1287,7 +1287,7 @@ bool veh_interact::overview( std::function<bool( const vehicle_part &pt )> enabl
 
     std::map<std::string, std::function<void( const catacurses::window &, int )>> headers;
 
-    int epower_w = veh->total_epower_w();
+    int epower_w = veh->net_battery_charge_rate_w();
     headers["ENGINE"] = [this]( const catacurses::window & w, int y ) {
         trim_and_print( w, point( 1, y ), getmaxx( w ) - 2, c_light_gray,
                         string_format( _( "Engines: %sSafe %4d kW</color> %sMax %4d kW</color>" ),
@@ -1312,7 +1312,7 @@ bool veh_interact::overview( std::function<bool( const vehicle_part &pt )> enabl
         right_print( w, y, 1, c_light_gray, _( "Capacity  Status" ) );
     };
     headers["REACTOR"] = [this, epower_w]( const catacurses::window & w, int y ) {
-        int reactor_epower_w = veh->total_reactor_epower_w();
+        int reactor_epower_w = veh->max_reactor_epower_w();
         if( reactor_epower_w > 0 && epower_w < 0 ) {
             reactor_epower_w += epower_w;
         }
@@ -1345,9 +1345,10 @@ bool veh_interact::overview( std::function<bool( const vehicle_part &pt )> enabl
             // if tank contains something then display the contents in milliliters
             auto details = []( const vehicle_part & pt, const catacurses::window & w, int y ) {
                 right_print( w, y, 1, item::find_type( pt.ammo_current() )->color,
-                             string_format( "%s     <color_light_gray>%3s</color>",
+                             string_format( "%s     <color_light_gray>%s</color>",
                                             pt.fuel_current() != "null" ? item::nname( pt.fuel_current() ) : "",
-                                            pt.enabled ? _( "Yes" ) : _( "No" ) ) );
+                                            //~ translation should not exceed 3 console cells
+                                            right_justify( pt.enabled ? _( "Yes" ) : _( "No" ), 3 ) ) );
             };
 
             // display engine faults (if any)
@@ -1356,9 +1357,9 @@ bool veh_interact::overview( std::function<bool( const vehicle_part &pt )> enabl
                 int y = 0;
                 for( const auto &e : pt.faults() ) {
                     y += fold_and_print( w_msg, point( 1, y ), getmaxx( w_msg ) - 2, c_red,
-                                         _( "Faulty %1$s" ), e.obj().name() );
+                                         "%s", e.obj().name() );
                     y += fold_and_print( w_msg, point( 3, y ), getmaxx( w_msg ) - 4, c_light_gray,
-                                         e.obj().description() );
+                                         "%s", e.obj().description() );
                     y++;
                 }
                 wrefresh( w_msg );
@@ -1688,8 +1689,7 @@ bool veh_interact::can_remove_part( int idx, const player &p )
         msg << string_format( _( "> %1$s%2$s</color>" ), status_color( false ), reason ) << "\n";
         ok = false;
     }
-    std::string desc_color = string_format( "<color_%1$s>",
-                                            string_from_color( sel_vehicle_part->is_broken() ? c_dark_gray : c_light_gray ) );
+    const nc_color desc_color = sel_vehicle_part->is_broken() ? c_dark_gray : c_light_gray;
     sel_vehicle_part->info().format_description( msg, desc_color, getmaxx( w_msg ) - 4 );
 
     werase( w_msg );
@@ -1736,10 +1736,10 @@ bool veh_interact::do_remove( std::string &msg )
         if( can_remove && ( action == "REMOVE" || action == "CONFIRM" ) ) {
             switch( reason ) {
                 case LOW_MORALE:
-                    msg = _( "Your morale is too low to construct..." );
+                    msg = _( "Your morale is too low to construct…" );
                     return false;
                 case LOW_LIGHT:
-                    msg = _( "It's too dark to see what you are doing..." );
+                    msg = _( "It's too dark to see what you are doing…" );
                     return false;
                 case NOT_FREE:
                     msg = _( "You cannot remove that part while something is attached to it." );
@@ -1752,7 +1752,7 @@ bool veh_interact::do_remove( std::string &msg )
             }
             const std::vector<npc *> helpers = g->u.get_crafting_helpers();
             for( const npc *np : helpers ) {
-                add_msg( m_info, _( "%s helps with this task..." ), np->name );
+                add_msg( m_info, _( "%s helps with this task…" ), np->name );
             }
             sel_cmd = 'o';
             break;
@@ -1790,7 +1790,7 @@ bool veh_interact::do_siphon( std::string &msg )
             break;
     }
 
-    set_title( _( "Select part to siphon: " ) );
+    set_title( _( "Select part to siphon:" ) );
 
     auto sel = [&]( const vehicle_part & pt ) {
         return( pt.is_tank() && pt.base.contents_made_of( LIQUID ) );
@@ -1827,74 +1827,6 @@ bool veh_interact::do_unload( std::string &msg )
 
     act_vehicle_unload_fuel( veh );
     return true; // force redraw
-}
-
-bool veh_interact::do_tirechange( std::string &msg )
-{
-    const auto helpers = g->u.get_crafting_helpers();
-    switch( cant_do( 'c' ) ) {
-        case INVALID_TARGET:
-            msg = _( "There is no wheel to change here." );
-            return false;
-
-        case LACK_TOOLS:
-            if( !helpers.empty() ) {
-                msg = string_format(
-                          //~ %1$s represents the internal color name which shouldn't be translated, %2$s is an internal color name, %3$s is an internal color name, %4$s is an internal color name, and %5$d is the required lift strength
-                          _( "To change a wheel you need a %1$swrench</color>, a %2$swheel</color>, and either "
-                             "%3$slifting equipment</color> or %4$s%5$d</color> strength ( assisted )." ),
-                          status_color( has_wrench ), status_color( has_wheel ), status_color( has_jack ),
-                          status_color( g->u.can_lift( *veh ) ), veh->lift_strength() );
-            } else {
-                msg = string_format(
-                          //~ %1$s represents the internal color name which shouldn't be translated, %2$s is an internal color name, %3$s is an internal color name, %4$s is an internal color name, and %5$d is the required lift strength
-                          _( "To change a wheel you need a %1$swrench</color>, a %2$swheel</color>, and either "
-                             "%3$slifting equipment</color> or %4$s%5$d</color> strength." ),
-                          status_color( has_wrench ), status_color( has_wheel ), status_color( has_jack ),
-                          status_color( g->u.can_lift( *veh ) ), veh->lift_strength() );
-            }
-            return false;
-
-        case MOVING_VEHICLE:
-            msg = _( "Who is driving while you work?" );
-            return false;
-
-        default:
-            break;
-    }
-
-    set_title( _( "Choose wheel to use as replacement:" ) );
-
-    int pos = 0;
-    while( true ) {
-        sel_vpart_info = wheel_types[pos];
-        bool is_wheel = sel_vpart_info->has_flag( "WHEEL" );
-        display_list( pos, wheel_types );
-        bool has_comps = crafting_inv.has_components( sel_vpart_info->item, 1 );
-        werase( w_msg );
-        wrefresh( w_msg );
-
-        const std::string action = main_context.handle_input();
-        if( ( action == "TIRE_CHANGE" || action == "CONFIRM" ) &&
-            is_wheel && has_comps && has_wrench && ( g->u.can_lift( *veh ) || has_jack ) ) {
-            for( const npc *np : helpers ) {
-                add_msg( m_info, _( "%s helps with this task..." ), np->name );
-            }
-            sel_cmd = 'c';
-            break;
-
-        } else if( action == "QUIT" ) {
-            werase( w_list );
-            wrefresh( w_list );
-            werase( w_msg );
-            break;
-
-        } else {
-            move_in_list( pos, action, wheel_types.size() );
-        }
-    }
-
-    return false;
 }
 
 bool veh_interact::do_assign_crew( std::string &msg )
@@ -1942,7 +1874,7 @@ bool veh_interact::do_rename( std::string & )
                        .title( _( "Enter new vehicle name:" ) )
                        .width( 20 )
                        .query_string();
-    if( name.length() > 0 ) {
+    if( !name.empty() ) {
         veh->name = name;
         if( veh->tracking_on ) {
             overmap_buffer.remove_vehicle( veh );
@@ -2418,12 +2350,10 @@ void veh_interact::display_name()
     werase( w_name );
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     mvwprintz( w_name, point( 1, 0 ), c_light_gray, _( "Name: " ) );
-    std::string fac_name = veh->get_owner() && veh->get_owner() != g->u.get_faction() ?
-                           _( veh->get_owner()->name ) : _( "Yours" );
+
     mvwprintz( w_name, point( 1 + utf8_width( _( "Name: " ) ), 0 ),
-               veh->get_owner() != g->u.get_faction() ? c_light_red : c_light_green,
-               string_format( _( "%s (%s)" ), veh->name,
-                              veh->get_owner() == nullptr ? _( "not owned" ) : fac_name ) );
+               !veh->is_owned_by( g->u, true ) ? c_light_red : c_light_green,
+               string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) );
     wrefresh( w_name );
 }
 
@@ -2437,7 +2367,7 @@ void veh_interact::display_mode()
     size_t esc_pos = display_esc( w_mode );
 
     // broken indentation preserved to avoid breaking git history for large number of lines
-    const std::array<std::string, 11> actions = { {
+    const std::array<std::string, 10> actions = { {
             { _( "<i>nstall" ) },
             { _( "<r>epair" ) },
             { _( "<m>end" ) },
@@ -2459,7 +2389,6 @@ void veh_interact::display_mode()
             !cant_do( 'o' ),
             !cant_do( 's' ),
             !cant_do( 'd' ),
-            !cant_do( 'c' ),
             !cant_do( 'w' ),
             true,          // 'rename' is always available
             !cant_do( 'a' ),
@@ -2494,7 +2423,7 @@ size_t veh_interact::display_esc( const catacurses::window &win )
 
 /**
  * Draws the list of parts that can be mounted in the selected square. Used
- * when installing new parts or changing tires.
+ * when installing new parts.
  * @param pos The current cursor position in the list.
  * @param list The list to display parts from.
  * @param header Number of lines occupied by the list header
@@ -2622,15 +2551,16 @@ void veh_interact::display_details( const vpart_info *part )
     }
 
     if( part->has_flag( VPFLAG_WHEEL ) ) {
-        cata::optional<islot_wheel> whl = item::find_type( part->item )->wheel;
+        // Note: there is no guarantee that whl is non-empty!
+        const cata::optional<islot_wheel> &whl = item::find_type( part->item )->wheel;
         fold_and_print( w_details, point( col_1, line + 3 ), column_width, c_white,
                         "%s: <color_light_gray>%d\"</color>",
                         small_mode ? _( "Dia" ) : _( "Wheel Diameter" ),
-                        whl->diameter );
+                        whl ? whl->diameter : 0 );
         fold_and_print( w_details, point( col_2, line + 3 ), column_width, c_white,
                         "%s: <color_light_gray>%d\"</color>",
                         small_mode ? _( "Wdt" ) : _( "Wheel Width" ),
-                        whl->width );
+                        whl ? whl->width : 0 );
     }
 
     if( part->epower != 0 ) {
@@ -2846,7 +2776,7 @@ void veh_interact::complete_vehicle( player &p )
 
     const vpart_info &vpinfo = part_id.obj();
 
-    // cmd = Install Repair reFill remOve Siphon Unload Changetire reName relAbel
+    // cmd = Install Repair reFill remOve Siphon Unload reName relAbel
     switch( static_cast<char>( p.activity.index ) ) {
         case 'i': {
             const inventory &inv = p.crafting_inventory();
@@ -2896,33 +2826,33 @@ void veh_interact::complete_vehicle( player &p )
                 vpinfo.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
                 vpinfo.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
                 // Stash offset and set it to the location of the part so look_around will start there.
-                int px = p.view_offset.x;
-                int py = p.view_offset.y;
-                p.view_offset.x = veh->global_pos3().x + q.x - p.posx();
-                p.view_offset.y = veh->global_pos3().y + q.y - p.posy();
+                const tripoint old_view_offset = p.view_offset;
+                const tripoint offset = veh->global_pos3() + q;
+                p.view_offset = offset - p.pos();
 
-                bool is_overheadlight = vpinfo.has_flag( VPFLAG_HALF_CIRCLE_LIGHT );
-                popup( _( "Choose a facing direction for the new %s.  Press space to continue." ),
-                       is_overheadlight ? "overhead light" : "headlight" );
-                const cata::optional<tripoint> headlight_target = g->look_around();
+                point delta;
+                do {
+                    popup( _( "Press space, choose a facing direction for the new %s and confirm with enter." ),
+                           vpinfo.name() );
+                    const cata::optional<tripoint> chosen = g->look_around();
+                    if( !chosen ) {
+                        continue;
+                    }
+                    delta = ( *chosen - offset ).xy();
+                    // atan2 only gives reasonable values when delta is not all zero
+                } while( delta == point_zero );
+
                 // Restore previous view offsets.
-                p.view_offset.x = px;
-                p.view_offset.y = py;
+                p.view_offset = old_view_offset;
 
-                int dir = 0;
-                if( headlight_target ) {
-                    int delta_x = headlight_target->x - ( veh->global_pos3().x + q.x );
-                    int delta_y = headlight_target->y - ( veh->global_pos3().y + q.y );
-
-                    dir = static_cast<int>( atan2( static_cast<float>( delta_y ),
-                                                   static_cast<float>( delta_x ) ) * 180.0 / M_PI );
-                    dir -= veh->face.dir();
-                    while( dir < 0 ) {
-                        dir += 360;
-                    }
-                    while( dir > 360 ) {
-                        dir -= 360;
-                    }
+                int dir = static_cast<int>( atan2( static_cast<float>( delta.y ),
+                                                   static_cast<float>( delta.x ) ) * 180.0 / M_PI );
+                dir -= veh->face.dir();
+                while( dir < 0 ) {
+                    dir += 360;
+                }
+                while( dir > 360 ) {
+                    dir -= 360;
                 }
 
                 veh->parts[partnum].direction = dir;

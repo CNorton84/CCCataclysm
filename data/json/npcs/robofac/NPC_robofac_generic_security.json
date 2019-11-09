@@ -43,7 +43,7 @@
       { "item": "glasses_bal", "prob": 33 },
       { "item": "boots_combat" },
       { "item": "holster", "prob": 50 },
-      { "item": "chestrig" }
+      { "item": "tacvest" }
     ]
   },
   {
@@ -64,6 +64,6 @@
     "id": "TALK_HUB_SECURITY",
     "type": "talk_topic",
     "dynamic_line": [ "Keep it civil, merc.", "Just on watch, move along.", { "u_male": [ "Sir." ], "no": [ "Ma'am" ] } ],
-    "responses": [ { "text": "...", "topic": "TALK_DONE" } ]
+    "responses": [ { "text": "…", "topic": "TALK_DONE" } ]
   }
 ]

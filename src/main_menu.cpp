@@ -101,9 +101,7 @@ void main_menu::print_menu_items( const catacurses::window &w_in,
 
         std::string temp = shortcut_text( c_white, vItems[i] );
         if( iSel == i ) {
-            text += string_format( "[<color_%s>%s</color>]",
-                                   string_from_color( h_white ),
-                                   remove_color_tags( temp ) );
+            text += string_format( "[%s]", colorize( remove_color_tags( temp ), h_white ) );
         } else {
             text += string_format( "[%s]", temp );
         }
@@ -227,7 +225,7 @@ std::string main_menu::handle_input_timeout( input_context &ctxt )
 
 void main_menu::init_windows()
 {
-    if( LAST_TERMX == TERMX && LAST_TERMY == TERMY ) {
+    if( LAST_TERM == point( TERMX, TERMY ) ) {
         return;
     }
 
@@ -254,8 +252,7 @@ void main_menu::init_windows()
     // note: if iMenuOffset is changed,
     // please update MOTD and credits to indicate how long they can be.
 
-    LAST_TERMX = TERMX;
-    LAST_TERMY = TERMY;
+    LAST_TERM = point( TERMX, TERMY );
 }
 
 void main_menu::init_strings()
@@ -403,22 +400,27 @@ bool main_menu::opening_screen()
     print_menu( w_open, 0, menu_offset );
 
     if( !assure_dir_exist( FILENAMES["config_dir"] ) ) {
-        popup( _( "Unable to make config directory. Check permissions." ) );
+        popup( _( "Unable to make config directory.  Check permissions." ) );
         return false;
     }
 
     if( !assure_dir_exist( FILENAMES["savedir"] ) ) {
-        popup( _( "Unable to make save directory. Check permissions." ) );
+        popup( _( "Unable to make save directory.  Check permissions." ) );
         return false;
     }
 
     if( !assure_dir_exist( FILENAMES["templatedir"] ) ) {
-        popup( _( "Unable to make templates directory. Check permissions." ) );
+        popup( _( "Unable to make templates directory.  Check permissions." ) );
         return false;
     }
 
     if( !assure_dir_exist( FILENAMES["user_sound"] ) ) {
-        popup( _( "Unable to make sound directory. Check permissions." ) );
+        popup( _( "Unable to make sound directory.  Check permissions." ) );
+        return false;
+    }
+
+    if( !assure_dir_exist( FILENAMES["user_gfx"] ) ) {
+        popup( _( "Unable to make graphics directory.  Check permissions." ) );
         return false;
     }
 
@@ -541,7 +543,7 @@ bool main_menu::opening_screen()
                 for( int i = 1; i < NUM_SPECIAL_GAMES; i++ ) {
                     std::string spec_name = special_game_name( static_cast<special_game_id>( i ) );
                     special_names.push_back( spec_name );
-                    xlen += spec_name.size() + 2;
+                    xlen += utf8_width( shortcut_text( c_white, spec_name ), true ) + 2;
                 }
                 xlen += special_names.size() - 1;
                 point offset( menu_offset + point( -( xlen / 4 ) + 32 + extra_w / 2, -2 ) );
@@ -598,7 +600,8 @@ bool main_menu::opening_screen()
                 int xlen = 0;
                 for( int i = 0; i < settings_subs_to_display; ++i ) {
                     settings_subs.push_back( vSettingsSubItems[i] );
-                    xlen += vSettingsSubItems[i].size() + 2; // Open and close brackets added
+                    // Open and close brackets added
+                    xlen += utf8_width( shortcut_text( c_white, vSettingsSubItems[i] ), true ) + 2;
                 }
                 xlen += settings_subs.size() - 1;
                 point offset = menu_offset + point( 46 + extra_w / 2 - ( xlen / 4 ), -2 );
@@ -671,7 +674,7 @@ bool main_menu::new_character_tab()
     vSubItems.push_back( pgettext( "Main Menu|New Game", "<P|p>reset Character" ) );
     vSubItems.push_back( pgettext( "Main Menu|New Game", "<R|r>andom Character" ) );
     if( !MAP_SHARING::isSharing() ) { // "Play Now" function doesn't play well together with shared maps
-        vSubItems.push_back( pgettext( "Main Menu|New Game", "Play Now! (<F|f>ixed Scenario)" ) );
+        vSubItems.push_back( pgettext( "Main Menu|New Game", "Play Now!  (<F|f>ixed Scenario)" ) );
         vSubItems.push_back( pgettext( "Main Menu|New Game", "Play <N|n>ow!" ) );
     }
     std::vector<std::vector<std::string>> vNewGameHotkeys;
@@ -1203,12 +1206,12 @@ std::string main_menu::halloween_spider()
         "        |\n"
         "        |\n"
         "        |\n"
-        "  , .   |  . ,\n"
-        "  { | ,--, | }\n"
+        "  , .   |  . ,\n" // NOLINT(cata-text-style)
+        "  { | ,--, | }\n" // NOLINT(cata-text-style)
         "   \\\\{~~~~}//\n"
         "  /_/ {<color_c_red>..</color>} \\_\\\n"
         "  { {      } }\n"
-        "  , ,      , .";
+        "  , ,      , ."; // NOLINT(cata-text-style)
 
     return spider;
 }
@@ -1219,10 +1222,10 @@ std::string main_menu::halloween_graves()
         "                    _\n"
         "        -q       __(\")_\n"
         "         (\\      \\_  _/\n"
-        " .-.   .-''\"'.     |/\n"
+        " .-.   .-''\"'.     |/\n" // NOLINT(cata-text-style)
         "|RIP|  | RIP |   .-.\n"
         "|   |  |     |  |RIP|\n"
-        ";   ;  |     | ,'---',";
+        ";   ;  |     | ,'---',"; // NOLINT(cata-text-style)
 
     return graves;
 }

@@ -36,10 +36,24 @@ class zone_type
         std::string name_;
         std::string desc_;
     public:
+
+        zone_type_id id;
+        bool was_loaded;
+
+        zone_type() = default;
         explicit zone_type( const std::string &name, const std::string &desc ) : name_( name ),
             desc_( desc ) {}
+
         std::string name() const;
         std::string desc() const;
+
+        static void load_zones( JsonObject &jo, const std::string &src );
+        void load( JsonObject &jo, const std::string & );
+        /**
+         * All spells in the game.
+         */
+        static const std::vector<zone_type> &get_all();
+        bool is_valid() const;
 };
 
 class zone_options
@@ -407,12 +421,6 @@ class zone_manager
                 const faction_id &fac = your_fac ) const;
         std::unordered_set<tripoint> get_point_set_loot( const tripoint &where, int radius,
                 bool npc_search, const faction_id &fac = your_fac ) const;
-        void start_sort( const std::vector<tripoint> &src_sorted );
-        void end_sort();
-        bool is_sorting() const;
-        int get_num_processed( const tripoint &src ) const;
-        void increment_num_processed( const tripoint &src );
-        void decrement_num_processed( const tripoint &src );
 
         // 'direct' access to zone_manager::zones, giving direct access was nono
         std::vector<ref_zone_data> get_zones( const faction_id &fac = your_fac );

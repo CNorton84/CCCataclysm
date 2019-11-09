@@ -172,13 +172,6 @@ class Item_factory
         /** called after all JSON has been read and performs any necessary cleanup tasks */
         void finalize();
 
-        /**
-         * Load item category definition from json
-         * @param jo The json object to load data from.
-         * @throw std::string if the json object contains invalid data.
-         */
-        void load_item_category( JsonObject &jo );
-
         /** Migrations transform items loaded from legacy saves */
         void load_migration( JsonObject &jo );
 
@@ -260,12 +253,6 @@ class Item_factory
          * @param ammo Ammo type to check.
          */
         bool check_ammo_type( std::ostream &msg, const ammotype &ammo ) const;
-
-        // Map with all the defined item categories,
-        // This map should only grow, categories should never be removed from
-        // it as itype::category contains a pointer to the values of this map
-        // The key is the id of the item_category.
-        std::map<std::string, item_category> categories;
 
         /**
          * Called before creating a new template and handles inheritance via copy-from
@@ -358,7 +345,7 @@ class Item_factory
         void add_iuse( const std::string &type, use_function_pointer f );
         void add_iuse( const std::string &type, use_function_pointer f,
                        const std::string &info );
-        void add_actor( iuse_actor *ptr );
+        void add_actor( std::unique_ptr<iuse_actor> );
 
         std::map<itype_id, migration> migrations;
 
