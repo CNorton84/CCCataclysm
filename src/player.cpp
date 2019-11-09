@@ -369,6 +369,7 @@ static const trait_id trait_SAPIOVORE( "SAPIOVORE" );
 static const trait_id trait_SAVANT( "SAVANT" );
 static const trait_id trait_SCHIZOPHRENIC( "SCHIZOPHRENIC" );
 static const trait_id trait_SEESLEEP( "SEESLEEP" );
+static const trait_id trait_SEIZURE("SEIZURE");
 static const trait_id trait_SELFAWARE( "SELFAWARE" );
 static const trait_id trait_SHARKTEETH( "SHARKTEETH" );
 static const trait_id trait_SHELL2( "SHELL2" );
@@ -3609,6 +3610,10 @@ void player::suffer()
             } else {
                 add_effect( effect_downed, 2_turns, num_bp, false, 0, true );
             }
+        }
+        if (has_trait(trait_SEIZURE) && one_turn_in(1_days)) {
+            add_effect(effect_seizure, 1_hours);
+            popup(_("You are going to have a seizure soon.  Take Diazepam or find a safe place to wait it out."));
         }
         if( has_trait( trait_CHEMIMBALANCE ) ) {
             if( one_turn_in( 6_hours ) && !has_trait( trait_NOPAIN ) ) {
