@@ -23,30 +23,6 @@
     "effects": [ "COOKOFF" ]
   },
   {
-    "id": "reloaded_357sig_p",
-    "copy-from": "357sig_fmj",
-    "type": "AMMO",
-    "name": "reloaded .357 SIG +P",
-    "description": "Overpressure .357 SIG ammunition.  The round's increased velocity results in superior accuracy and stopping power at the cost of higher recoil.",
-    "price": 4800,
-    "count": 25,
-    "relative": { "damage": 2, "pierce": 2, "dispersion": -7 },
-    "proportional": { "recoil": 1.1 }
-  },
-  {
-    "id": "reloaded_357sig_p2",
-    "copy-from": "357sig_fmj",
-    "type": "AMMO",
-    "name": "reloaded .357 SIG +P+",
-    "description": "A step beyond the high-pressure .357 SIG +P round, the +P+ has even higher internal pressure offering superior damage, accuracy, and penetration.",
-    "price": 5800,
-    "count": 10,
-    "relative": { "damage": 5, "pierce": 5, "dispersion": -15 },
-    "proportional": { "recoil": 1.2 }
-  },
-  
-  
-  {
     "id": "357sig_jhp",
     "copy-from": "357sig_fmj",
     "type": "AMMO",
@@ -58,16 +34,18 @@
     "id": "reloaded_357sig_fmj",
     "copy-from": "357sig_fmj",
     "type": "AMMO",
-    "name": "reloaded .357 SIG FMJ",
-	"name_plural": "reloaded .357 SIG FMJ",
-    "proportional": { "price": 0.7, "damage": 0.9, "dispersion": 1.1 }
+    "name": ".357 SIG FMJ, reloaded",
+    "proportional": { "price": 0.7, "damage": 0.9, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ] }
   },
   {
     "id": "reloaded_357sig_jhp",
     "copy-from": "357sig_jhp",
     "type": "AMMO",
-    "name": "reloaded .357 SIG JHP",
-	"name_plural": "reloaded .357 SIG JHP",
-    "proportional": { "price": 0.7, "damage": 0.9, "dispersion": 1.1 }
+    "name": ".357 SIG JHP, reloaded",
+    "proportional": { "price": 0.7, "damage": 0.9, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ] }
   }
 ]
