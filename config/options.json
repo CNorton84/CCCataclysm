@@ -19,7 +19,7 @@
   },
   { "info": "If true, enables automatic use of wielded pickaxes and jackhammers whenever trying to move into mineable terrain.", "default": "Default: False", "name": "AUTO_MINING", "value": "false"
   },
-  { "info": "Action to perform when 'Auto foraging' is enabled.  Bushes: Only forage bushes.  - Trees: Only forage trees.  - Everything: Forage bushes, trees, and everything else including flowers, cattails etc.", "default": "Default: off - Values: off, bushes, trees, both", "name": "AUTO_FORAGING", "value": "off"
+  { "info": "Action to perform when 'Auto foraging' is enabled.  Bushes: Only forage bushes.  - Trees: Only forage trees.  - Everything: Forage bushes, trees, and everything else including flowers, cattails etc.", "default": "Default: off - Values: off, bushes, trees, both", "name": "AUTO_FORAGING", "value": "bushes"
   },
   { "info": "If false, will cause player to drop new items that cause them to exceed the weight limit.", "default": "Default: False", "name": "DANGEROUS_PICKUPS", "value": "false"
   },
@@ -31,9 +31,9 @@
   },
   { "info": "If true, safe mode will automatically reactivate after a certain number of turns.  See option 'Turns to auto reactivate safe mode.'", "default": "Default: False", "name": "AUTOSAFEMODE", "value": "false"
   },
-  { "info": "Number of turns after which safe mode is reactivated. Will only reactivate if no hostiles are in 'Safe mode proximity distance.'", "default": "Default: 50 - Min: 1, Max: 100", "name": "AUTOSAFEMODETURNS", "value": "50"
+  { "info": "Number of turns after which safe mode is reactivated.  Will only reactivate if no hostiles are in 'Safe mode proximity distance.'", "default": "Default: 50 - Min: 1, Max: 600", "name": "AUTOSAFEMODETURNS", "value": "50"
   },
-  { "info": "Number of turns an ignored monster stays ignored after it is no longer seen.  0 disables this option and monsters are permanently ignored.", "default": "Default: 200 - Min: 0, Max: 600", "name": "SAFEMODEIGNORETURNS", "value": "200"
+  { "info": "Number of turns an ignored monster stays ignored after it is no longer seen.  0 disables this option and monsters are permanently ignored.", "default": "Default: 200 - Min: 0, Max: 3600", "name": "SAFEMODEIGNORETURNS", "value": "200"
   },
   { "info": "If enabled, monsters will take periodic gameplay turns.  This value is the delay between each turn, in seconds.  Works best with Safe Mode disabled.  0 = disabled.", "default": "Default: 0.00 - Min: 0.00, Max: 10.00", "name": "TURN_DURATION", "value": "0.00"
   },
@@ -51,7 +51,7 @@
   },
   { "info": "If true, the game will calculate range in a realistic way: light sources will be circles, diagonal movement will cover more ground and take longer.  If disabled, everything is square: moving to the northwest corner of a building takes as long as moving to the north wall.", "default": "Default: True", "name": "CIRCLEDIST", "value": "true"
   },
-  { "info": "Set to drop empty containers after use.  No: Don't drop any. - Watertight: All except watertight containers. - All: Drop all containers.", "default": "Default: no - Values: no, watertight, all", "name": "DROP_EMPTY", "value": "no"
+  { "info": "Set to drop empty containers after use.  No: Don't drop any.  - Watertight: All except watertight containers.  - All: Drop all containers.", "default": "Default: no - Values: no, watertight, all", "name": "DROP_EMPTY", "value": "no"
   },
   { "info": "Always: Always start deathcam.  Ask: Query upon death.  Never: Never show deathcam.", "default": "Default: ask - Values: always, ask, never", "name": "DEATHCAM", "value": "ask"
   },
@@ -81,7 +81,7 @@
   },
   { "info": "If true, automatically follow the crosshair when firing/throwing.", "default": "Default: False", "name": "SNAP_TO_TARGET", "value": "true"
   },
-  { "info": "If true, will query before disassembling items.", "default": "Default: True", "name": "QUERY_DISASSEMBLE", "value": "true"
+  { "info": "If true, will query before disassembling items while butchering.", "default": "Default: True", "name": "QUERY_DISASSEMBLE", "value": "true"
   },
   { "info": "If true, will query before removing a keybinding from a hotkey.", "default": "Default: True", "name": "QUERY_KEYBIND_REMOVAL", "value": "true"
   },
@@ -127,7 +127,7 @@
   },
   { "info": "Centered or to edge, shift the view toward the selected item if it is outside of your current viewport.", "default": "Default: centered - Values: false, centered, edge", "name": "SHIFT_LIST_ITEM_VIEW", "value": "centered"
   },
-  { "info": "Enabled: automatically assign letters to any carried items that lack them. Disabled: do not auto-assign letters. Favorites: only auto-assign letters to favorited items.", "default": "Default: favorites - Values: disabled, enabled, favorites", "name": "AUTO_INV_ASSIGN", "value": "favorites"
+  { "info": "Enabled: automatically assign letters to any carried items that lack them.  Disabled: do not auto-assign letters.  Favorites: only auto-assign letters to favorited items.", "default": "Default: favorites - Values: disabled, enabled, favorites", "name": "AUTO_INV_ASSIGN", "value": "favorites"
   },
   { "info": "If true, show item health bars instead of reinforced, scratched etc. text.", "default": "Default: True", "name": "ITEM_HEALTH_BAR", "value": "true"
   },
@@ -181,7 +181,7 @@
   },
   { "info": "If true, replaces some TTF rendered text with tiles.", "default": "Default: True", "name": "USE_TILES", "value": "true"
   },
-  { "info": "Choose the tileset you want to use.", "default": "Default: MSX++DEAD_PEOPLE - Values: ASCIITiles, ChestHole16, ChestHole32, ChestHole_iso, ChestHole, HitButton_iso, hoder, MSX++DEAD_PEOPLE, MShock24Modded, MShock32Modded, MshockXottoplus, retrodays", "name": "TILES", "value": "MSX++DEAD_PEOPLE"
+  { "info": "Choose the tileset you want to use.", "default": "Default: retrodays - Values: ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm, ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm", "name": "TILES", "value": "UNDEAD_PEOPLE"
   },
   { "info": "Specified the mode in which the memory map is drawn.  Requires restart.", "default": "Default: color_pixel_sepia - Values: color_pixel_darken, color_pixel_sepia", "name": "MEMORY_MAP_MODE", "value": "color_pixel_darken"
   },
@@ -201,7 +201,7 @@
   },
   { "info": "Controls how fast the hostile creature beacons blink on the pixel minimap.  Value is multiplied by 200 ms.  Set to 0 to disable.", "default": "Default: 10 - Min: 0, Max: 50", "name": "PIXEL_MINIMAP_BLINK", "value": "5"
   },
-  { "info": "Sets which video display will be used to show the game. Requires restart.", "default": "Default: 0: Surface Display", "name": "DISPLAY", "value": "0"
+  { "info": "Sets which video display will be used to show the game.  Requires restart.", "default": "Default: 0: Surface Display", "name": "DISPLAY", "value": "0"
   },
   { "info": "Starts Cataclysm in one of the fullscreen modes.  Requires restart.", "default": "Default: windowedbl - Values: no, fullscreen, windowedbl", "name": "FULLSCREEN", "value": "windowedbl"
   },
@@ -213,7 +213,7 @@
   },
   { "info": "Sets the scaling mode, 'none' ( default ) displays at the game's native resolution, 'nearest'  uses low-quality but fast scaling, and 'linear' provides high-quality scaling.", "default": "Default: none - Values: none, nearest, linear", "name": "SCALING_MODE", "value": "nearest"
   },
-  { "info": "Factor by which to scale the display. Requires restart.", "default": "Default: 1 - Values: 1, 2, 4", "name": "SCALING_FACTOR", "value": "1"
+  { "info": "Factor by which to scale the display.  Requires restart.", "default": "Default: 1 - Values: 1, 2, 4", "name": "SCALING_FACTOR", "value": "1"
   },
   { "info": "Determines the scope, which is known in the beginning of the game.", "default": "Default: 15 - Min: 3, Max: 20", "name": "DISTANCE_INITIAL_VISIBILITY", "value": "15"
   },
@@ -227,13 +227,15 @@
   },
   { "info": "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "SKILL_TRAINING_SPEED", "value": "0.10"
   },
-  { "info": "Scales experience gained from reading books.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "BOOK_TRAINING_SPEED", "value": "4.50"
+  { "info": "Scales experience gained from reading books.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "BOOK_TRAINING_SPEED", "value": "10.00"
   },
-  { "info": "Scales experience gained for combat skills.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "COMBAT_TRAINING_SPEED", "value": "10.00"
+  { "info": "Scales experience gained for combat skills.  This is relative to the Skill Training Speed option-- setting Skill Training Speed to 0.5 and this option to 0.5 will result in a skill gain rate from reading that is 25% of the default rate.", "default": "Default: 1.00 - Min: 0.00, Max: 100.00", "name": "COMBAT_TRAINING_SPEED", "value": "100.00"
   },
   { "info": "Set the level of skill rust.  Vanilla: Vanilla Cataclysm - Capped: Capped at skill levels 2 - Int: Intelligence dependent - IntCap: Intelligence dependent, capped - Off: None at all.", "default": "Default: off - Values: vanilla, capped, int, intcap, off", "name": "SKILL_RUST", "value": "off"
   },
   { "info": "If false, vision is limited to current z-level.  If true and the world is in z-level mode, the vision will extend beyond current z-level.  Currently very bugged!", "default": "Default: False", "name": "FOV_3D", "value": "false"
+  },
+  { "info": "How many levels up and down the experimental 3D field of vision reaches.  (This many levels up, this many levels down.)  3D vision of the full height of the world can slow the game down a lot.  Seeing fewer Z-levels is faster.", "default": "Default: 4 - Min: 0, Max: 21", "name": "FOV_3D_Z_RANGE", "value": "4"
   },
   { "info": "If true, file path names are going to be transcoded from system encoding to UTF-8 when reading and will be transcoded back when writing.  Mainly for CJK Windows users.", "default": "Default: True", "name": "ENCODING_CONV", "value": "true"
   },
@@ -261,9 +263,9 @@
   },
   { "info": "Initial starting time of day on character generation.", "default": "Default: 8 - Min: 0, Max: 23", "name": "INITIAL_TIME", "value": "6"
   },
-  { "info": "How many days into the year the cataclysm occurred. Day 0 is Spring 1. Can be overridden by scenarios. This does not advance food rot or monster evolution.", "default": "Default: 30 - Min: 0, Max: 999", "name": "INITIAL_DAY", "value": "80"
+  { "info": "How many days into the year the cataclysm occurred.  Day 0 is Spring 1.  Can be overridden by scenarios.  This does not advance food rot or monster evolution.", "default": "Default: 60 - Min: 0, Max: 999", "name": "INITIAL_DAY", "value": "80"
   },
-  { "info": "How many days after the cataclysm the player spawns. Day 0 is the day of the cataclysm. Can be overridden by scenarios. Increasing this will cause food rot and monster evolution to advance.", "default": "Default: 0 - Min: 0, Max: 9999", "name": "SPAWN_DELAY", "value": "0"
+  { "info": "How many days after the cataclysm the player spawns.  Day 0 is the day of the cataclysm.  Can be overridden by scenarios.  Increasing this will cause food rot and monster evolution to advance.", "default": "Default: 0 - Min: 0, Max: 9999", "name": "SPAWN_DELAY", "value": "0"
   },
   { "info": "Season length, in days.  Warning: Very little other than the duration of seasons scales with this value, so adjusting it may cause nonsensical results.", "default": "Default: 91 - Min: 14, Max: 127", "name": "SEASON_LENGTH", "value": "91"
   },
@@ -275,7 +277,7 @@
   },
   { "info": "If true, spawn zombies at shelters.  Makes the starting game a lot harder.", "default": "Default: False", "name": "BLACK_ROAD", "value": "false"
   },
-  { "info": "If true, static NPCs will spawn at pre-defined locations. Requires world reset.", "default": "Default: True", "name": "STATIC_NPC", "value": "true"
+  { "info": "If true, static NPCs will spawn at pre-defined locations.  Requires world reset.", "default": "Default: True", "name": "STATIC_NPC", "value": "true"
   },
   { "info": "Determines whether starting NPCs should spawn, and if they do, how exactly.", "default": "Default: scenario - Values: never, always, scenario", "name": "STARTING_NPC", "value": "never"
   },
