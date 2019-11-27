@@ -119,6 +119,8 @@
   },
   { "info": "Morale display style in sidebar.", "default": "Default: vertical - Values: vertical, horizontal", "name": "MORALE_STYLE", "value": "vertical"
   },
+  { "info": "If true, Advanced Inventory Manager menu will fit full screen, otherwise it will leave sidebar visible.", "default": "Default: False", "name": "AIM_WIDTH", "value": "false"
+  },
   { "info": "Move view by how many squares per keypress.", "default": "Default: 1 - Min: 1, Max: 50", "name": "MOVE_VIEW_OFFSET", "value": "1"
   },
   { "info": "With Fast Scroll option enabled, shift view on the overmap and while looking around by this many squares per keypress.", "default": "Default: 5 - Min: 1, Max: 50", "name": "FAST_SCROLL_OFFSET", "value": "5"
@@ -181,7 +183,7 @@
   },
   { "info": "If true, replaces some TTF rendered text with tiles.", "default": "Default: True", "name": "USE_TILES", "value": "true"
   },
-  { "info": "Choose the tileset you want to use.", "default": "Default: retrodays - Values: ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm, ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm", "name": "TILES", "value": "UNDEAD_PEOPLE"
+  { "info": "Choose the tileset you want to use.", "default": "Default: retrodays - Values: ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm, ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm", "name": "TILES", "value": "UltimateCataclysm"
   },
   { "info": "Specified the mode in which the memory map is drawn.  Requires restart.", "default": "Default: color_pixel_sepia - Values: color_pixel_darken, color_pixel_sepia", "name": "MEMORY_MAP_MODE", "value": "color_pixel_darken"
   },

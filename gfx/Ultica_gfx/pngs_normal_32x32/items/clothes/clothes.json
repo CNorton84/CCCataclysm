@@ -1,0 +1,47 @@
+[
+    {
+      "id": "maid_hat",
+      "fg": ["maid_hat"],
+      "bg": []
+    },
+    {
+      "id": "maid_dress",
+      "fg": ["maid_dress"],
+      "bg": []
+    },
+    {
+      "id": "stockings",
+      "fg": ["stockings"],
+      "bg": []
+    },
+    {
+      "id": "dress_shoes",
+      "fg": ["dress_shoes"],
+      "bg": []
+    },
+    {
+      "id": "bra",
+      "fg": ["bra"],
+      "bg": []
+    },
+    {
+      "id": "panties",
+      "fg": ["panties"],
+      "bg": []
+    },
+  {
+    "id": "hat_knit",
+    "fg": ["hat_knit"],
+    "bg": []
+  },
+  {
+    "id": "hoodie",
+    "fg": ["hoodie"],
+    "bg": []
+  },
+  {
+    "id": "mask_dust",
+    "fg": ["mask_dust"],
+    "bg": []
+  }
+]
