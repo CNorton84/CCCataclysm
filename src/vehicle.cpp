@@ -79,9 +79,8 @@ static const fault_id fault_filter_fuel( "fault_engine_filter_fuel" );
 static bool is_sm_tile_outside( const tripoint &real_global_pos );
 static bool is_sm_tile_over_water( const tripoint &real_global_pos );
 
-const skill_id skill_mechanics( "mechanics" );
-const efftype_id effect_harnessed( "harnessed" );
-const efftype_id effect_winded( "winded" );
+static const efftype_id effect_harnessed( "harnessed" );
+static const efftype_id effect_winded( "winded" );
 
 // 1 kJ per battery charge
 const int bat_energy_j = 1000;
@@ -128,7 +127,7 @@ class DefaultRemovePartHandler : public RemovePartHandler
                     }
                 }
             }
-            // @todo maybe do this for all the nearby NPCs as well?
+            // @TODO: maybe do this for all the nearby NPCs as well?
 
             if( g->u.get_grab_type() == OBJECT_VEHICLE && g->u.grab_point == veh.global_part_pos3( part ) ) {
                 if( veh.parts_at_relative( veh.parts[part].mount, false ).empty() ) {
@@ -175,7 +174,7 @@ class MapgenRemovePartHandler : public RemovePartHandler
             // Ignored for now. We don't initialize the transparency cache in mapgen anyway.
         }
         void removed( vehicle &veh, const int /*part*/ ) override {
-            // @todo check if this is necessary, it probably isn't during mapgen
+            // @TODO: check if this is necessary, it probably isn't during mapgen
             m.dirty_vehicle_list.insert( &veh );
         }
         void spawn_animal_from_part( item &/*base*/, const tripoint &/*loc*/ ) override {
@@ -183,7 +182,7 @@ class MapgenRemovePartHandler : public RemovePartHandler
             // Ignored. The base item will not be changed and will spawn as is:
             // still containing the animal.
             // This should not happend during mapgen anyway.
-            // @todo *if* this actually happens: create a spawn point for the animal instead.
+            // @TODO: *if* this actually happens: create a spawn point for the animal instead.
         }
 };
 
@@ -736,6 +735,9 @@ std::set<point> vehicle::immediate_path( int rotate )
 
 void vehicle::stop_autodriving()
 {
+    if( !is_autodriving && !is_patrolling && !is_following ) {
+        return;
+    }
     if( velocity > 0 ) {
         if( is_patrolling || is_following ) {
             autodrive( 0, 10 );
@@ -995,9 +997,11 @@ void vehicle::smash( map &m, float hp_percent_loss_min, float hp_percent_loss_ma
             if( p == other_p ) {
                 continue;
             }
-            if( ( part_info( p ).location.empty() &&
-                  part_info( p ).get_id() == part_info( other_p ).get_id() ) ||
-                ( part_info( p ).location == part_info( other_p ).location ) ) {
+            const vpart_info &p_info = part_info( p );
+            const vpart_info &other_p_info = part_info( other_p );
+
+            if( p_info.get_id() == other_p_info.get_id() ||
+                ( !p_info.location.empty() && p_info.location == other_p_info.location ) ) {
                 // Deferred creation of the handler to here so it is only created when actually needed.
                 if( !handler_ptr ) {
                     // This is a heuristic: we just assume the default handler is good enough when called
@@ -1163,7 +1167,9 @@ int vehicle::part_vpower_w( const int index, const bool at_full_hp ) const
         if( vp.info().fuel_type == fuel_type_animal ) {
             monster *mon = get_pet( index );
             if( mon != nullptr && mon->has_effect( effect_harnessed ) ) {
-                pwr = mon->get_speed() * ( mon->get_size() - 1 ) * 3;
+                // An animal that can carry twice as much weight, can pull a cart twice as hard.
+                pwr = mon->get_speed() * ( mon->get_size() - 1 ) * 3
+                      * ( mon->get_mountable_weight_ratio() * 5 );
             } else {
                 pwr = 0;
             }
@@ -2090,7 +2096,7 @@ bool vehicle::remove_part( const int p, RemovePartHandler &handler )
 
     for( auto &i : get_items( p ) ) {
         // Note: this can spawn items on the other side of the wall!
-        // @todo fix this ^^
+        // @TODO: fix this ^^
         tripoint dest( part_loc + point( rng( -3, 3 ), rng( -3, 3 ) ) );
         handler.add_item_or_charges( dest, i );
     }
@@ -3580,7 +3586,7 @@ static double simple_cubic_solution( double a, double b, double c, double d )
         std::complex<double> term_sum( term1 + term2 );
 
         if( imag( term_sum ) < 2 ) {
-            return p + real( term_sum ) ;
+            return p + real( term_sum );
         } else {
             debugmsg( "cubic solution returned imaginary values" );
             return 0;
@@ -3705,7 +3711,7 @@ bool vehicle::do_environmental_effects()
          * - The weather is any effect that would cause the player to be wet. */
         if( vp.part().blood > 0 && g->m.is_outside( vp.pos() ) ) {
             needed = true;
-            if( g->weather.weather >= WEATHER_DRIZZLE && g->weather.weather <= WEATHER_ACID_RAIN ) {
+            if( g->weather.weather >= WEATHER_LIGHT_DRIZZLE && g->weather.weather <= WEATHER_ACID_RAIN ) {
                 vp.part().blood--;
             }
         }
@@ -3801,7 +3807,7 @@ void vehicle::noise_and_smoke( int load, time_duration time )
     if( !combustion ) {
         return;
     }
-    /// @todo handle other engine types: muscle / animal / wind / coal / ...
+    /// @TODO: handle other engine types: muscle / animal / wind / coal / ...
 
     if( exhaust_part != -1 && engine_on ) {
         spew_field( mufflesmoke, exhaust_part, fd_smoke,
@@ -4457,7 +4463,7 @@ void vehicle::consume_fuel( int load, const int t_seconds, bool skip_electric )
             g->u.mod_thirst( 1 );
             g->u.mod_fatigue( 1 );
         }
-        g->u.mod_stat( "stamina", -( base_burn + mod ) );
+        g->u.mod_stamina( -( base_burn + mod ) );
         add_msg( m_debug, "Load: %d", load );
         add_msg( m_debug, "Mod: %d", mod );
         add_msg( m_debug, "Burn: %d", -( base_burn + mod ) );
@@ -4746,6 +4752,21 @@ vehicle *vehicle::find_vehicle( const tripoint &where )
     }
 
     return nullptr;
+}
+
+void vehicle::enumerate_vehicles( std::map<vehicle *, bool> &connected_vehicles,
+                                  std::set<vehicle *> &vehicle_list )
+{
+    auto enumerate_visitor = [&connected_vehicles]( vehicle * veh, int amount, int ) {
+        // Only emplaces if element is not present already.
+        connected_vehicles.emplace( veh, false );
+        return amount;
+    };
+    for( vehicle *veh : vehicle_list ) {
+        // This autovivifies, and also overwrites the value if already present.
+        connected_vehicles[veh] = true;
+        traverse_vehicle_graph( veh, 1, enumerate_visitor );
+    }
 }
 
 template <typename Func, typename Vehicle>

@@ -1384,6 +1384,13 @@
   },
   {
     "type": "keybinding",
+    "id": "MARK_DANGER",
+    "category": "OVERMAP_NOTES",
+    "name": "Mark as Dangerous",
+    "bindings": [ { "input_method": "keyboard", "key": "M" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "DELETE_NOTE",
     "category": "OVERMAP",
     "name": "Delete Note",
@@ -3034,9 +3041,15 @@
   },
   {
     "type": "keybinding",
-    "name": "Reload Wielded Item",
+    "name": "Reload Weapons",
     "category": "DEFAULTMODE",
     "id": "reload_weapon"
+  },
+  {
+    "type": "keybinding",
+    "name": "Reload Wielded Item",
+    "category": "DEFAULTMODE",
+    "id": "reload_wielded"
   },
   {
     "type": "keybinding",
@@ -3449,6 +3462,12 @@
     "name": "View Scentmap",
     "category": "DEFAULTMODE",
     "id": "debug_scent"
+  },
+  {
+    "type": "keybinding",
+    "name": "View Scent Type",
+    "category": "DEFAULTMODE",
+    "id": "debug_scent_type"
   },
   {
     "type": "keybinding",

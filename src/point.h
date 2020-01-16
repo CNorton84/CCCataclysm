@@ -71,7 +71,8 @@ struct point {
     /**
      * Rotate point clockwise @param turns times, 90 degrees per turn,
      * around the center of a rectangle with the dimensions specified
-     * by @param dim. By default rotates around the origin (0, 0).
+     * by @param dim
+     * By default rotates around the origin (0, 0).
      * NOLINTNEXTLINE(cata-use-named-point-constants) */
     point rotate( int turns, const point &dim = { 1, 1 } ) const {
         assert( turns >= 0 );
@@ -230,6 +231,7 @@ struct rectangle {
 // Useful for example to round an arbitrary point to the nearest point on the
 // screen, or the nearest point in a particular submap.
 point clamp_half_open( const point &p, const rectangle &r );
+point clamp_inclusive( const point &p, const rectangle &r );
 
 struct box {
     tripoint p_min;
@@ -317,7 +319,7 @@ namespace std
 {
 template <>
 struct hash<point> {
-    std::size_t operator()( const point &k ) const {
+    std::size_t operator()( const point &k ) const noexcept {
         constexpr uint64_t a = 2862933555777941757;
         size_t result = k.y;
         result *= a;
@@ -333,7 +335,7 @@ namespace std
 {
 template <>
 struct hash<tripoint> {
-    std::size_t operator()( const tripoint &k ) const {
+    std::size_t operator()( const tripoint &k ) const noexcept {
         constexpr uint64_t a = 2862933555777941757;
         size_t result = k.z;
         result *= a;
