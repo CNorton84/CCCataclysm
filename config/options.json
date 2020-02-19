@@ -15,13 +15,15 @@
   },
   { "info": "If true, enables configured auto features below.  Disabled as long as any enemy monster is seen.", "default": "Default: False", "name": "AUTO_FEATURES", "value": "true"
   },
-  { "info": "Action to perform when 'Auto pulp or butcher' is enabled.  Pulp: Pulp corpses you stand on.  - Pulp Adjacent: Also pulp corpses adjacent from you.  - Butcher: Butcher corpses you stand on.", "default": "Default: off - Values: off, pulp, pulp_adjacent, butcher", "name": "AUTO_PULP_BUTCHER", "value": "pulp_adjacent"
+  { "info": "Action to perform when 'Auto pulp or butcher' is enabled.  Pulp: Pulp corpses you stand on.  - Pulp Adjacent: Also pulp corpses adjacent from you.  - Butcher: Butcher corpses you stand on.", "default": "Default: off - Values: off, pulp, pulp_adjacent, butcher", "name": "AUTO_PULP_BUTCHER", "value": "off"
   },
   { "info": "If true, enables automatic use of wielded pickaxes and jackhammers whenever trying to move into mineable terrain.", "default": "Default: False", "name": "AUTO_MINING", "value": "false"
   },
-  { "info": "Action to perform when 'Auto foraging' is enabled.  Bushes: Only forage bushes.  - Trees: Only forage trees.  - Everything: Forage bushes, trees, and everything else including flowers, cattails etc.", "default": "Default: off - Values: off, bushes, trees, both", "name": "AUTO_FORAGING", "value": "bushes"
+  { "info": "Action to perform when 'Auto foraging' is enabled.  Bushes: Only forage bushes.  - Trees: Only forage trees.  - Everything: Forage bushes, trees, and everything else including flowers, cattails etc.", "default": "Default: off - Values: off, bushes, trees, both", "name": "AUTO_FORAGING", "value": "off"
   },
   { "info": "If false, will cause player to drop new items that cause them to exceed the weight limit.", "default": "Default: False", "name": "DANGEROUS_PICKUPS", "value": "false"
+  },
+  { "info": "Always: You will be prompted to move onto dangerous tiles.  Running: You will only be able to move onto dangerous tiles while running and will be prompted.  Crouching: You will only be able to move onto a dangerous tile while crouching and will be prompted.  Never:  You will not be able to move onto a dangerous tile unless running and will not be warned or prompted.", "default": "Default: ALWAYS - Values: ALWAYS, RUNNING, CROUCHING, NEVER", "name": "DANGEROUS_TERRAIN_WARNING_PROMPT", "value": "ALWAYS"
   },
   { "info": "If true, will hold the game and display a warning if a hostile monster/npc is approaching.", "default": "Default: True", "name": "SAFEMODE", "value": "true"
   },
@@ -37,7 +39,7 @@
   },
   { "info": "If enabled, monsters will take periodic gameplay turns.  This value is the delay between each turn, in seconds.  Works best with Safe Mode disabled.  0 = disabled.", "default": "Default: 0.00 - Min: 0.00, Max: 10.00", "name": "TURN_DURATION", "value": "0.00"
   },
-  { "info": "If true, game will periodically save the map.  Autosaves occur based on in-game turns or real-time minutes, whichever is larger.", "default": "Default: False", "name": "AUTOSAVE", "value": "true"
+  { "info": "If true, game will periodically save the map.  Autosaves occur based on in-game turns or real-time minutes, whichever is larger.", "default": "Default: True", "name": "AUTOSAVE", "value": "true"
   },
   { "info": "Number of game turns between autosaves", "default": "Default: 50 - Min: 10, Max: 1000", "name": "AUTOSAVE_TURNS", "value": "50"
   },
@@ -135,6 +137,8 @@
   },
   { "info": "If true, show item symbols in inventory and pick up menu.", "default": "Default: False", "name": "ITEM_SYMBOLS", "value": "false"
   },
+  { "info": "If true, the default ammo is added to weapon and magazine names.  For example \"Mosin-Nagant M44 (4/5)\" becomes \"Mosin-Nagant M44 (4/5 7.62x54mm)\".", "default": "Default: True", "name": "AMMO_IN_NAMES", "value": "true"
+  },
   { "info": "Enable input from joystick.", "default": "Default: True", "name": "ENABLE_JOYSTICK", "value": "true"
   },
   { "info": "Show: Cursor is always shown.  Hide: Cursor is hidden.  HideKB: Cursor is hidden on keyboard input and unhidden on mouse movement.", "default": "Default: show - Values: show, hide, hidekb", "name": "HIDE_CURSOR", "value": "show"
@@ -183,7 +187,7 @@
   },
   { "info": "If true, replaces some TTF rendered text with tiles.", "default": "Default: True", "name": "USE_TILES", "value": "true"
   },
-  { "info": "Choose the tileset you want to use.", "default": "Default: retrodays - Values: ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm, ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays, UltimateCataclysm", "name": "TILES", "value": "UltimateCataclysm"
+  { "info": "Choose the tileset you want to use.", "default": "Default: retrodays - Values: ASCIITiles, ChestHole16, HitButton_iso, hoder, UNDEAD_PEOPLE, retrodays+, retrodays, UltimateCataclysm", "name": "TILES", "value": "UNDEAD_PEOPLE"
   },
   { "info": "Specified the mode in which the memory map is drawn.  Requires restart.", "default": "Default: color_pixel_sepia - Values: color_pixel_darken, color_pixel_sepia", "name": "MEMORY_MAP_MODE", "value": "color_pixel_darken"
   },
@@ -205,7 +209,7 @@
   },
   { "info": "Sets which video display will be used to show the game.  Requires restart.", "default": "Default: 0: Surface Display", "name": "DISPLAY", "value": "0"
   },
-  { "info": "Starts Cataclysm in one of the fullscreen modes.  Requires restart.", "default": "Default: windowedbl - Values: no, fullscreen, windowedbl", "name": "FULLSCREEN", "value": "windowedbl"
+  { "info": "Starts Cataclysm in one of the fullscreen modes.  Requires restart.", "default": "Default: windowedbl - Values: no, maximized, fullscreen, windowedbl", "name": "FULLSCREEN", "value": "windowedbl"
   },
   { "info": "Set which renderer to use.  Requires restart.", "default": "Default: direct3d - Values: direct3d, direct3d11, opengl, opengles2, software", "name": "RENDERER", "value": "direct3d"
   },
@@ -241,7 +245,7 @@
   },
   { "info": "If true, file path names are going to be transcoded from system encoding to UTF-8 when reading and will be transcoded back when writing.  Mainly for CJK Windows users.", "default": "Default: True", "name": "ENCODING_CONV", "value": "true"
   },
-  { "info": "Handling of game world when last character dies.", "default": "Default: keep - Values: keep, reset, delete, query", "name": "WORLD_END", "value": "keep"
+  { "info": "Handling of game world when last character dies.", "default": "Default: reset - Values: reset, delete, query, keep", "name": "WORLD_END", "value": "keep"
   },
   { "info": "A number determining how large cities are.  0 disables cities, roads and any scenario requiring a city start.", "default": "Default: 8 - Min: 0, Max: 16", "name": "CITY_SIZE", "value": "8"
   },
