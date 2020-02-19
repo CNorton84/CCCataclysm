@@ -40,22 +40,7 @@
 #include "player.h"
 #include "string_id.h"
 #include "point.h"
-
-static const efftype_id effect_blind( "blind" );
-static const efftype_id effect_bounced( "bounced" );
-static const efftype_id effect_downed( "downed" );
-static const efftype_id effect_onfire( "onfire" );
-static const efftype_id effect_npc_suspend( "npc_suspend" );
-static const efftype_id effect_sap( "sap" );
-static const efftype_id effect_sleep( "sleep" );
-static const efftype_id effect_stunned( "stunned" );
-static const efftype_id effect_zapped( "zapped" );
-static const efftype_id effect_lying_down( "lying_down" );
-static const efftype_id effect_no_sight( "no_sight" );
-static const efftype_id effect_riding( "riding" );
-static const efftype_id effect_ridden( "ridden" );
-static const efftype_id effect_tied( "tied" );
-static const efftype_id effect_paralyzepoison( "paralyzepoison" );
+#include "cata_string_consts.h"
 
 const std::map<std::string, m_size> Creature::size_map = {
     {"TINY", MS_TINY}, {"SMALL", MS_SMALL}, {"MEDIUM", MS_MEDIUM},
@@ -651,7 +636,7 @@ void Creature::deal_projectile_attack( Creature *source, dealt_projectile_attack
         damage_mult *= rng_float( 0, .25 );
     }
 
-    if( print_messages && source != nullptr && !message.empty() ) {
+    if( print_messages && source != nullptr && !message.empty() && u_see_this ) {
         source->add_msg_if_player( m_good, message );
     }
 
@@ -698,13 +683,7 @@ void Creature::deal_projectile_attack( Creature *source, dealt_projectile_attack
             add_effect( effect_stunned, rng( 3_turns, 8_turns ) );
         }
     }
-    if( proj.proj_effects.count( "FLAME" ) ) {
-        if( made_of( material_id( "veggy" ) ) || made_of_any( cmat_flammable ) ) {
-            add_effect( effect_onfire, rng( 8_turns, 20_turns ), bp_hit );
-        } else if( made_of_any( cmat_flesh ) ) {
-            add_effect( effect_onfire, rng( 5_turns, 10_turns ), bp_hit );
-        }
-    } else if( proj.proj_effects.count( "INCENDIARY" ) ) {
+    if( proj.proj_effects.count( "INCENDIARY" ) ) {
         if( made_of( material_id( "veggy" ) ) || made_of_any( cmat_flammable ) ) {
             add_effect( effect_onfire, rng( 2_turns, 6_turns ), bp_hit );
         } else if( made_of_any( cmat_flesh ) && one_in( 4 ) ) {
@@ -918,7 +897,7 @@ void Creature::add_effect( const effect &eff, bool force, bool deferred )
                 force, deferred );
 }
 
-void Creature::add_effect( const efftype_id &eff_id, const time_duration dur, body_part bp,
+void Creature::add_effect( const efftype_id &eff_id, const time_duration &dur, body_part bp,
                            bool permanent, int intensity, bool force, bool deferred )
 {
     // Check our innate immunity
